@@ -1,0 +1,3 @@
+train: # path to train files
+val: # path to validate files
+test: # path to test files
