@@ -142,8 +142,9 @@ def render_batch(batchx, batchy, save_path):
     fig.savefig(save_path, bbox_inches='tight')
     plt.close()
 
-def read_file_list(p):
+def read_file_list(p, base_path=None):
+    base_path = base_path if base_path is not None else ""
     with open(p, "r") as f:
         d = f.readlines()
-        d = [a.strip("\n") for a in d]
+        d = [os.path.join(base_path, a.strip("\n")) for a in d]
     return d

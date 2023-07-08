@@ -3,7 +3,7 @@ import math
 import torch
 from torch import nn
 
-__all__ = ['Conv', 'DWConv', 'Concat', 'initialize_weights']
+__all__ = ['autopad', 'Conv', 'DWConv', 'Concat', 'initialize_weights']
 
 def initialize_weights(model):
     """Initialize model weights to random values."""

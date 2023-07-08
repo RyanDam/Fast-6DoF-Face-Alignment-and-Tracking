@@ -8,6 +8,10 @@ from torchvision import transforms
 import albumentations as A
 import cv2
 
+from landmark.utils.pose_estimation import PoseEstimator
+
+POSE_ROTAION_MED = np.array([-0.02234655,  0.28259986, -2.98499613])
+POSE_ROTATION_STD = np.array([0.87680358, 0.53386852, 0.25789746])
 
 def gen_bbox(lmk, scale=[1.4, 1.6], offset=0.2, square=True):
     bbox = np.array([np.min(lmk, 0), np.max(lmk, 0)])
@@ -63,9 +67,10 @@ def read_data(img_path, lmk_scale=1.0, aug=None, imgsz=128):
     return croped.astype(np.float32), lmk.astype(np.float32)
 
 class LandmarkDataset(Dataset):
-    def __init__(self, cfgs, annotations_files, imgsz=128, aug=True):
+    def __init__(self, cfgs, annotations_files, imgsz=128, aug=True, pose_rotation=False):
         self.img_paths = annotations_files
         self.imgsz = imgsz
+        self.pose_rotation = pose_rotation
 
         if aug:
             self.aug = A.Compose([
@@ -104,7 +109,16 @@ class LandmarkDataset(Dataset):
 
         img, lmk = read_data(img_path, aug=self.aug, imgsz=self.imgsz)
         
-        img = self.trans(img)
-        lmk = self.trans(lmk)
+        if self.pose_rotation:
+            estimator = PoseEstimator(self.imgsz, self.imgsz)
+            lmk_denorm = (lmk + 0.5)*self.imgsz
+            rot_vec, _ = estimator.solve(lmk_denorm[:68,:])
+            rot_vec_norm = np.divide(rot_vec[:,0] - POSE_ROTAION_MED, POSE_ROTATION_STD*2)
 
-        return img, lmk.flatten()
+            rot_weight = 1
+            if np.abs(rot_vec_norm).max() > 1.5:
+                rot_weight = 0
+            lmk_rot_norm = np.concatenate([lmk.flatten().astype(np.float32), rot_vec_norm.astype(np.float32), np.array([rot_weight], dtype=np.float32)])
+            return img.transpose((2, 0, 1)), lmk_rot_norm.flatten()
+        else:
+            return img.transpose((2, 0, 1)), lmk.flatten()

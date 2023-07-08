@@ -12,6 +12,8 @@ aug: 0.5 # aug
 # model
 model: # modelname
 imgsz: 128 # size of input image as integer
+aux_pose: False # model with auxiliary pose esimation
+muliplier: 1 # model depth multiplier
 
 # training
 epoch: 100 # number of training epoch
@@ -27,3 +29,4 @@ device: cpu # target device, ie. cuda device=0 or device=0,1,2,3 or device=cpu
 dump_batch: 5 # write sample batch for debug
 save: True # save checkpoint and stats
 pin_memory: False # use pin memory for dataloader
+aux_pose_weight: 0.5 # loss weight for auxiliary pose esimation

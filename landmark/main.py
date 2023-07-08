@@ -53,16 +53,20 @@ def do_train(cfg_: Union[str, Path, Dict, SimpleNamespace]):
     LOGGER.info(f"Using {cfgs.device} device")
 
     LOGGER.info("Load Train data")
-    dataset = LandmarkDataset(cfgs, read_file_list(cfgs.data.train), imgsz=cfgs.imgsz)
+    dataset = LandmarkDataset(cfgs, read_file_list(cfgs.data.train, base_path=cfgs.data.base_path), 
+                                imgsz=cfgs.imgsz, 
+                                pose_rotation=cfgs.aux_pose)
     train_dataloader = DataLoader(dataset, batch_size=cfgs.batch_size, shuffle=True, 
                                     pin_memory=cfgs.pin_memory,
                                     num_workers=cfgs.workers,
                                     persistent_workers=True,
                                     multiprocessing_context="spawn")
 
-
     LOGGER.info("Load Val data")
-    dataset_test = LandmarkDataset(cfgs, read_file_list(cfgs.data.val), imgsz=cfgs.imgsz, aug=False)
+    dataset_test = LandmarkDataset(cfgs, read_file_list(cfgs.data.val, base_path=cfgs.data.base_path), 
+                                    imgsz=cfgs.imgsz, 
+                                    pose_rotation=cfgs.aux_pose, 
+                                    aug=False)
     test_dataloader = DataLoader(dataset_test, batch_size=cfgs.batch_size, shuffle=False,
                                     pin_memory=cfgs.pin_memory,
                                     num_workers=cfgs.workers,
@@ -70,7 +74,7 @@ def do_train(cfg_: Union[str, Path, Dict, SimpleNamespace]):
                                     multiprocessing_context="spawn")
 
     LOGGER.info(f"Load Model: {cfgs.model}")
-    net = getattr(model, cfgs.model)().to(cfgs.device)
+    net = getattr(model, cfgs.model)(imgz=cfgs.imgsz, muliplier=cfgs.muliplier, pose_rotation=cfgs.aux_pose).to(cfgs.device)
     _ = model_info(net, detailed=True, imgsz=cfgs.imgsz, device=cfgs.device)
 
     loss_fn = getattr(nn, cfgs.loss)(reduction='none')
@@ -91,7 +95,7 @@ def do_train(cfg_: Union[str, Path, Dict, SimpleNamespace]):
     with open(save_log_csv, "a") as f:
         fields = '\t'.join(LMK_PART_NAMES)
         fields_test = '\t'.join([f"test_{a}" for a in LMK_PART_NAMES])
-        f.write(f"epoch\ttotal\tnme\t{fields}\ttest_total\ttest_nme\t{fields_test}\n")
+        f.write(f"epoch\ttotal\tnme\t{fields}\tpose\ttest_total\ttest_nme\t{fields_test}\ttest_pose\n")
 
     for current_epoch in range(cfgs.epoch):
         LOGGER.info(f"\n\nEPOCH {current_epoch+1}, lr: {scheduler.get_last_lr()[0]:>7f}")
@@ -106,11 +110,13 @@ def do_train(cfg_: Union[str, Path, Dict, SimpleNamespace]):
             f.write(f"\t{train_loss_dict['nme']}")
             for n in LMK_PART_NAMES:
                 f.write(f"\t{train_loss_dict[n]}")
+            f.write(f"\t{train_loss_dict['pose']}")
 
             f.write(f"\t{test_loss_dict['total']}")
             f.write(f"\t{test_loss_dict['nme']}")
             for n in LMK_PART_NAMES:
                 f.write(f"\t{test_loss_dict[n]}")
+            f.write(f"\t{test_loss_dict['pose']}")
             
             f.write(f"\n")
 

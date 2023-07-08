@@ -74,6 +74,48 @@ class LightWeightBackbone(nn.Module):
 
         return x
 
+class AuxiliaryBackbone(nn.Module):
+
+    default_act = nn.PReLU()  # default activation
+
+    def __init__(self, in_ch, out_ch, muliplier=1, act=None):
+        super().__init__()
+
+        self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
+
+        self.stack1 = nn.Sequential(
+            nn.Conv2d(in_ch, 32, 3, 2, autopad(3)),
+            nn.BatchNorm2d(32, track_running_stats=False),
+            nn.PReLU(),
+            nn.Conv2d(32, 64, 3, 1, autopad(3)),
+            nn.BatchNorm2d(64, track_running_stats=False),
+            nn.PReLU(),
+            nn.Conv2d(64, 64, 3, 2, autopad(3)),
+            nn.BatchNorm2d(64, track_running_stats=False),
+            nn.PReLU(),
+            nn.Conv2d(64, 128, 3, 1, autopad(3)),
+            nn.BatchNorm2d(128, track_running_stats=False),
+            nn.PReLU(),
+            nn.AdaptiveAvgPool2d((1, 1)),
+        )
+
+        self.stack2 = nn.Sequential(
+            nn.Linear(128, out_ch*3),
+            nn.Tanh(),
+            nn.Linear(out_ch*3, out_ch),
+            nn.Tanh()
+        )
+
+        initialize_weights(self)
+
+    def forward(self, x):
+
+        x = self.stack1(x)
+        x = x.flatten(start_dim=1)
+        x = self.stack2(x)
+
+        return x
+
 class MainStreamModule(nn.Module):
     default_act = nn.ReLU6()  # default activation
 
@@ -154,8 +196,9 @@ class BaseModel(nn.Module):
 
 class LightWeightModel(BaseModel):
 
-    def __init__(self, imgz=128, muliplier=1):
+    def __init__(self, imgz=128, muliplier=1, pose_rotation=False):
         super().__init__()
+        self.pose_rotation = pose_rotation
 
         # backbone, output size = size/4
         self.backbone = LightWeightBackbone(muliplier=muliplier)
@@ -166,9 +209,14 @@ class LightWeightModel(BaseModel):
         # x3 = size/16
         self.mainstream = MainStreamModule(muliplier=muliplier)
 
+        if pose_rotation:
+            self.aux = AuxiliaryBackbone(int(16*muliplier), 3, muliplier=muliplier)
+            
         output_ch = int(64 + 64 + 64)
         
         self.logit = FERegress(output_ch, 70*2)
+
+        self.concat = Concat()
 
         initialize_weights(self)
 
@@ -176,20 +224,26 @@ class LightWeightModel(BaseModel):
 
         x = self.backbone(x)
         
+        if self.pose_rotation:
+            aux = self.aux(x)
+
         x = self.mainstream(x)
         
         x = self.logit(x)
+
+        if self.pose_rotation:
+            x = self.concat([x, aux])
 
         return x
 
 class LandmarkModel(BaseModel):
 
-    def __init__(self, depth_muliplier=1):
+    def __init__(self, imgz=128, muliplier=1):
         super().__init__()
         
         self.stack1 = nn.Sequential(
             nn.Conv2d( 3, 32, 3, stride=2, padding=2),
-            nn.BatchNorm2d(256, track_running_stats=False),
+            nn.BatchNorm2d(32, track_running_stats=False),
             nn.ReLU(),
             nn.Conv2d(32, 32, 3, padding=1),
             nn.BatchNorm2d(32, track_running_stats=False),
@@ -198,7 +252,7 @@ class LandmarkModel(BaseModel):
 
         self.stack2 = nn.Sequential(
             nn.Conv2d(32, 64, 3, stride=2, padding=2),
-            nn.BatchNorm2d(256, track_running_stats=False),
+            nn.BatchNorm2d(64, track_running_stats=False),
             nn.ReLU(),
             nn.Conv2d(64, 64, 3, padding=1),
             nn.BatchNorm2d(64, track_running_stats=False),
@@ -207,7 +261,7 @@ class LandmarkModel(BaseModel):
 
         self.stack3 = nn.Sequential(
             nn.Conv2d(64, 128, 3, stride=2, padding=2),
-            nn.BatchNorm2d(256, track_running_stats=False),
+            nn.BatchNorm2d(128, track_running_stats=False),
             nn.ReLU(),
             nn.Conv2d(128, 128, 3, padding=1),
             nn.BatchNorm2d(128, track_running_stats=False),

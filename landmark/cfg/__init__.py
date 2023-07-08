@@ -6,9 +6,9 @@ from typing import Dict, Union
 from landmark.cfg.yaml_utils import yaml_load, yaml_save, yaml_print, DEFAULT_CFG_DICT, DEFAULT_CFG_DATA, IterableSimpleNamespace
 
 CFG_INT_KEYS= 'seed', 'workers', 'imgsz', 'epoch', 'batch_size', 'dump_batch', 'patience', 'warmup'
-CFG_FRACTION_KEYS = ('lr', 'lr0_factor', 'lr_factor')
+CFG_FRACTION_KEYS = ('lr', 'lr0_factor', 'lr_factor', 'aux_pose_weight', 'muliplier')
 CFG_FLOAT_KEYS = ("aug", )
-CFG_BOOL_KEYS = ("save", "override", "pin_memory")
+CFG_BOOL_KEYS = ("save", "override", "pin_memory", "aux_pose")
 
 def cfg2dict(cfg):
     """

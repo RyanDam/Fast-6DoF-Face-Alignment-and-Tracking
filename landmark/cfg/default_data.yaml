@@ -1,3 +1,4 @@
+base_path: # base path to file
 train: # path to train files
 val: # path to validate files
 test: # path to test files
