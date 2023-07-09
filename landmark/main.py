@@ -85,7 +85,6 @@ def do_train(cfg_: Union[str, Path, Dict, SimpleNamespace]):
 
     best_epoch_loss = 999
     best_epoch_no = 0
-    last_impatience_epoch = 0
     start_train_time = time.time()
 
     scheduler_warmup = ConstantLR(optimizer, factor=cfgs.lr0_factor, total_iters=cfgs.warmup)
@@ -120,13 +119,17 @@ def do_train(cfg_: Union[str, Path, Dict, SimpleNamespace]):
             
             f.write(f"\n")
 
+        generate_graph(save_log_csv, save_log_png)
+
         torch.save(net.state_dict(), save_last)
         if test_loss_dict["total"] < best_epoch_loss:
             best_epoch_loss = test_loss_dict["total"]
             best_epoch_no = current_epoch
             torch.save(net.state_dict(), save_best)
             LOGGER.info(f"---> Saved best: epoch: {current_epoch+1}, loss: {best_epoch_loss:>7f}")
-
-        generate_graph(save_log_csv, save_log_png)
-
+        else:
+            if current_epoch - best_epoch_no > cfgs.patience:
+                LOGGER.info(f"STOPPED in {int(time.time() - start_train_time)}s, due to no improvement after {current_epoch - best_epoch_no} epochs, best epoch: {best_epoch_no}, val loss: {best_epoch_loss:>7f}")
+                break
+            
     LOGGER.info(f"DONE in {int(time.time() - start_train_time)}s, best epoch: {best_epoch_no}, val loss: {best_epoch_loss:>7f}")

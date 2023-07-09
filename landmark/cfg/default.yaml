@@ -13,11 +13,11 @@ aug: 0.5 # aug
 model: # modelname
 imgsz: 128 # size of input image as integer
 aux_pose: False # model with auxiliary pose esimation
-muliplier: 1 # model depth multiplier
+muliplier: 1.0 # model depth multiplier
 
 # training
 epoch: 100 # number of training epoch
-patience: 5 # number of epoch to adjust lr if val loss is not improve
+patience: 15 # number of epoch to adjust lr if val loss is not improve
 warmup: 2 # number of epoch to warmup model using lr0, after that use lr
 optimizer: SGD # torch.optim class
 loss: L1Loss # torch.nn class

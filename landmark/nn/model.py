@@ -84,23 +84,23 @@ class AuxiliaryBackbone(nn.Module):
         self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
 
         self.stack1 = nn.Sequential(
-            nn.Conv2d(in_ch, 32, 3, 2, autopad(3)),
-            nn.BatchNorm2d(32, track_running_stats=False),
+            nn.Conv2d(in_ch, int(32*muliplier), 3, 2, autopad(3)),
+            nn.BatchNorm2d(int(32*muliplier), track_running_stats=False),
             nn.PReLU(),
-            nn.Conv2d(32, 64, 3, 1, autopad(3)),
-            nn.BatchNorm2d(64, track_running_stats=False),
+            nn.Conv2d(int(32*muliplier), int(64*muliplier), 3, 1, autopad(3)),
+            nn.BatchNorm2d(int(64*muliplier), track_running_stats=False),
             nn.PReLU(),
-            nn.Conv2d(64, 64, 3, 2, autopad(3)),
-            nn.BatchNorm2d(64, track_running_stats=False),
+            nn.Conv2d(int(64*muliplier), int(64*muliplier), 3, 2, autopad(3)),
+            nn.BatchNorm2d(int(64*muliplier), track_running_stats=False),
             nn.PReLU(),
-            nn.Conv2d(64, 128, 3, 1, autopad(3)),
-            nn.BatchNorm2d(128, track_running_stats=False),
+            nn.Conv2d(int(64*muliplier), int(128*muliplier), 3, 1, autopad(3)),
+            nn.BatchNorm2d(int(128*muliplier), track_running_stats=False),
             nn.PReLU(),
             nn.AdaptiveAvgPool2d((1, 1)),
         )
 
         self.stack2 = nn.Sequential(
-            nn.Linear(128, out_ch*3),
+            nn.Linear(int(128*muliplier), out_ch*3),
             nn.Tanh(),
             nn.Linear(out_ch*3, out_ch),
             nn.Tanh()
@@ -212,8 +212,7 @@ class LightWeightModel(BaseModel):
         if pose_rotation:
             self.aux = AuxiliaryBackbone(int(16*muliplier), 3, muliplier=muliplier)
             
-        output_ch = int(64 + 64 + 64)
-        
+        output_ch = int((64 + 64 + 64)*muliplier)
         self.logit = FERegress(output_ch, 70*2)
 
         self.concat = Concat()
@@ -238,56 +237,56 @@ class LightWeightModel(BaseModel):
 
 class LandmarkModel(BaseModel):
 
-    def __init__(self, imgz=128, muliplier=1):
+    def __init__(self, imgz=128, muliplier=1, pose_rotation=False):
         super().__init__()
         
         self.stack1 = nn.Sequential(
-            nn.Conv2d( 3, 32, 3, stride=2, padding=2),
-            nn.BatchNorm2d(32, track_running_stats=False),
+            nn.Conv2d( 3, int(32*muliplier), 3, stride=2, padding=2),
+            nn.BatchNorm2d(int(32*muliplier), track_running_stats=False),
             nn.ReLU(),
-            nn.Conv2d(32, 32, 3, padding=1),
-            nn.BatchNorm2d(32, track_running_stats=False),
+            nn.Conv2d(int(32*muliplier), int(32*muliplier), 3, padding=1),
+            nn.BatchNorm2d(int(32*muliplier), track_running_stats=False),
             nn.ReLU()
         )
 
         self.stack2 = nn.Sequential(
-            nn.Conv2d(32, 64, 3, stride=2, padding=2),
-            nn.BatchNorm2d(64, track_running_stats=False),
+            nn.Conv2d(int(32*muliplier), int(64*muliplier), 3, stride=2, padding=2),
+            nn.BatchNorm2d(int(64*muliplier), track_running_stats=False),
             nn.ReLU(),
-            nn.Conv2d(64, 64, 3, padding=1),
-            nn.BatchNorm2d(64, track_running_stats=False),
+            nn.Conv2d(int(64*muliplier), int(64*muliplier), 3, padding=1),
+            nn.BatchNorm2d(int(64*muliplier), track_running_stats=False),
             nn.ReLU()
         )
 
         self.stack3 = nn.Sequential(
-            nn.Conv2d(64, 128, 3, stride=2, padding=2),
-            nn.BatchNorm2d(128, track_running_stats=False),
+            nn.Conv2d(int(64*muliplier), int(128*muliplier), 3, stride=2, padding=2),
+            nn.BatchNorm2d(int(128*muliplier), track_running_stats=False),
             nn.ReLU(),
-            nn.Conv2d(128, 128, 3, padding=1),
-            nn.BatchNorm2d(128, track_running_stats=False),
+            nn.Conv2d(int(128*muliplier), int(128*muliplier), 3, padding=1),
+            nn.BatchNorm2d(int(128*muliplier), track_running_stats=False),
             nn.ReLU(),
-            nn.Conv2d(128, 128, 3, padding=1),
-            nn.BatchNorm2d(128, track_running_stats=False),
+            nn.Conv2d(int(128*muliplier), int(128*muliplier), 3, padding=1),
+            nn.BatchNorm2d(int(128*muliplier), track_running_stats=False),
             nn.ReLU()
         )
 
         self.stack4 = nn.Sequential(
-            nn.Conv2d(128, 256, 3, stride=2, padding=2),
-            nn.BatchNorm2d(256, track_running_stats=False),
+            nn.Conv2d(int(128*muliplier), int(256*muliplier), 3, stride=2, padding=2),
+            nn.BatchNorm2d(int(256*muliplier), track_running_stats=False),
             nn.ReLU(),
-            nn.Conv2d(256, 256, 3, padding=1),
-            nn.BatchNorm2d(256, track_running_stats=False),
+            nn.Conv2d(int(256*muliplier), int(256*muliplier), 3, padding=1),
+            nn.BatchNorm2d(int(256*muliplier), track_running_stats=False),
             nn.ReLU(),
-            nn.Conv2d(256, 256, 3, padding=1),
-            nn.BatchNorm2d(256, track_running_stats=False),
+            nn.Conv2d(int(256*muliplier), int(256*muliplier), 3, padding=1),
+            nn.BatchNorm2d(int(256*muliplier), track_running_stats=False),
             nn.ReLU(),
             nn.AdaptiveAvgPool2d((1, 1)),
         )
 
         self.stack5 = nn.Sequential(
-            nn.Linear(256, 192),
+            nn.Linear(int(256*muliplier), int(192*muliplier)),
             nn.Tanh(),
-            nn.Linear(192, 70*2),
+            nn.Linear(int(192*muliplier), 70*2),
             nn.Tanh()
         )
 

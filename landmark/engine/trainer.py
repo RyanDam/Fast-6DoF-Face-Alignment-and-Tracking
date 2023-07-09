@@ -18,11 +18,12 @@ def train_loop(cfgs, current_epoch, dataloader, model, loss_fn, optimizer, name=
 
         pred = model(x_device)
 
-        loss = loss_fn(pred, y_device[:,:-1])
-
         if cfgs.aux_pose:
-                pose_weight = y_device[:,-1]
-                loss[:,-3:] *= cfgs.aux_pose_weight * pose_weight
+            loss = loss_fn(pred, y_device[:,:-1])
+            pose_weight = y_device[:,-1]
+            loss[:,-3:] *= cfgs.aux_pose_weight * pose_weight
+        else:
+            loss = loss_fn(pred, y_device)
 
         total_loss = loss.mean()
 
