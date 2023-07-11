@@ -1,3 +1,5 @@
+[![PyPI version](https://badge.fury.io/py/fdfat.svg)](https://badge.fury.io/py/fdfat)
+
 Working in progess...
 
 # Fast 6DoF Face Alignment and Tracking
