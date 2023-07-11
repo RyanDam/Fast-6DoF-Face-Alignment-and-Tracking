@@ -12,15 +12,15 @@ from torch import nn
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ConstantLR, SequentialLR, LinearLR, ReduceLROnPlateau
 
-from landmark.nn import model
-from landmark.utils.logger import LOGGER
-from landmark.data.dataloader import LandmarkDataset
-from landmark.utils.utils import LMK_PART_NAMES, increment_path, generate_graph, read_file_list
-from landmark.utils.model_utils import init_seeds, select_device, model_info
-from landmark.cfg import get_cfg, get_cfg_data, yaml_save, cfg2dict, yaml_print
+from fdfat.nn import model
+from fdfat.utils.logger import LOGGER
+from fdfat.data.dataloader import LandmarkDataset
+from fdfat.utils.utils import LMK_PART_NAMES, increment_path, generate_graph, read_file_list
+from fdfat.utils.model_utils import init_seeds, select_device, model_info
+from fdfat.cfg import get_cfg, get_cfg_data, yaml_save, cfg2dict, yaml_print
 
-from landmark.engine.trainer import train_loop
-from landmark.engine.validator import val_loop
+from fdfat.engine.trainer import train_loop
+from fdfat.engine.validator import val_loop
 
 def do_train(cfg_: Union[str, Path, Dict, SimpleNamespace]):
     

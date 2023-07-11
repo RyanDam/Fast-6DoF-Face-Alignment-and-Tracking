@@ -10,7 +10,7 @@ import torchvision
 
 from fvcore.nn import FlopCountAnalysis
 
-from landmark.utils.logger import LOGGER, check_version
+from fdfat.utils.logger import LOGGER, check_version
 
 TORCHVISION_0_10 = check_version(torchvision.__version__, '0.10.0')
 TORCH_1_9 = check_version(torch.__version__, '1.9.0')

@@ -8,7 +8,7 @@ from torchvision import transforms
 import albumentations as A
 import cv2
 
-from landmark.utils.pose_estimation import PoseEstimator
+from fdfat.utils.pose_estimation import PoseEstimator
 
 POSE_ROTAION_MED = np.array([-0.02234655,  0.28259986, -2.98499613])
 POSE_ROTATION_STD = np.array([0.87680358, 0.53386852, 0.25789746])

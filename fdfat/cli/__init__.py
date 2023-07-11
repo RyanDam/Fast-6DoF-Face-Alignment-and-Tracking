@@ -2,8 +2,8 @@ import os, sys
 import argparse
 from types import SimpleNamespace
 
-from landmark.cfg import get_cfg
-from landmark.main import do_train
+from fdfat.cfg import get_cfg
+from fdfat.main import do_train
 
 def entrypoint():
     default_cfg = get_cfg()

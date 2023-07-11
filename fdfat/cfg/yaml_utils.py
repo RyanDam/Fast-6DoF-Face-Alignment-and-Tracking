@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Union
 from types import SimpleNamespace
 
-from landmark.utils.logger import LOGGER, colorstr
+from fdfat.utils.logger import LOGGER, colorstr
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]
