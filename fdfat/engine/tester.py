@@ -3,7 +3,7 @@ import torch
 from collections import defaultdict
 
 from fdfat.utils.utils import LMK_PARTS, LMK_PART_NAMES, render_batch
-from landmark import TQDM_BAR_FORMAT
+from fdfat import TQDM_BAR_FORMAT
 from fdfat.metric.metric import nme
 
 def test_loop(cfgs, dataloader, model, loss_fn, name="Test"):

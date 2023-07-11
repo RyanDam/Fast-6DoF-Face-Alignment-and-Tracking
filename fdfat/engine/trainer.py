@@ -4,7 +4,7 @@ from collections import defaultdict
 import torch
 
 from fdfat.utils.utils import LMK_PARTS, LMK_PART_NAMES, render_batch
-from landmark import TQDM_BAR_FORMAT
+from fdfat import TQDM_BAR_FORMAT
 from fdfat.metric.metric import nme
 
 def train_loop(cfgs, current_epoch, dataloader, model, loss_fn, optimizer, name="Train"):

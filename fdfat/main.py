@@ -2,6 +2,8 @@ import time
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Dict, Union
+from datetime import datetime, timedelta
+from copy import deepcopy
 import matplotlib
 matplotlib.use('Agg')
 
@@ -11,6 +13,8 @@ torchvision.disable_beta_transforms_warning()
 from torch import nn
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ConstantLR, SequentialLR, LinearLR, ReduceLROnPlateau
+
+from . import __version__
 
 from fdfat.nn import model
 from fdfat.utils.logger import LOGGER
@@ -72,9 +76,14 @@ def do_train(cfg_: Union[str, Path, Dict, SimpleNamespace]):
                                     num_workers=cfgs.workers,
                                     persistent_workers=True,
                                     multiprocessing_context="spawn")
-
+    start_epoch = 0
     LOGGER.info(f"Load Model: {cfgs.model}")
     net = getattr(model, cfgs.model)(imgz=cfgs.imgsz, muliplier=cfgs.muliplier, pose_rotation=cfgs.aux_pose).to(cfgs.device)
+    # if cfgs.resume:
+    #     checkpoint = torch.load(save_best)
+    #     net.load_state_dict(checkpoint)
+    #     start_epoch = checkpoint['epoch']
+
     _ = model_info(net, detailed=True, imgsz=cfgs.imgsz, device=cfgs.device)
 
     loss_fn = getattr(nn, cfgs.loss)(reduction='none')
@@ -91,12 +100,24 @@ def do_train(cfg_: Union[str, Path, Dict, SimpleNamespace]):
     scheduler_main = LinearLR(optimizer, start_factor=1, end_factor=0.1, total_iters=cfgs.epoch-cfgs.warmup)
     scheduler = SequentialLR(optimizer, schedulers=[scheduler_warmup, scheduler_main], milestones=[cfgs.warmup])
 
+    # if not cfgs.resume:
     with open(save_log_csv, "a") as f:
         fields = '\t'.join(LMK_PART_NAMES)
         fields_test = '\t'.join([f"test_{a}" for a in LMK_PART_NAMES])
         f.write(f"epoch\ttotal\tnme\t{fields}\tpose\ttest_total\ttest_nme\t{fields_test}\ttest_pose\n")
 
-    for current_epoch in range(cfgs.epoch):
+    def save_model(epoch, save_path):
+        ckpt = {
+            'epoch': epoch,
+            'model': deepcopy(net).half(),
+            'optimizer': optimizer.state_dict(),
+            'train_args': cfgs,
+            'date': datetime.now().isoformat(),
+            'version': __version__
+        }
+        torch.save(ckpt, save_path)
+
+    for current_epoch in range(start_epoch, cfgs.epoch):
         LOGGER.info(f"\n\nEPOCH {current_epoch+1}, lr: {scheduler.get_last_lr()[0]:>7f}")
         
         train_loss_dict = train_loop(cfgs, current_epoch, train_dataloader, net, loss_fn, optimizer)
@@ -121,11 +142,13 @@ def do_train(cfg_: Union[str, Path, Dict, SimpleNamespace]):
 
         generate_graph(save_log_csv, save_log_png)
 
-        torch.save(net.state_dict(), save_last)
+        save_model(current_epoch, save_last)
+        # torch.save(net.state_dict(), save_last)
         if test_loss_dict["total"] < best_epoch_loss:
             best_epoch_loss = test_loss_dict["total"]
             best_epoch_no = current_epoch
-            torch.save(net.state_dict(), save_best)
+            # torch.save(net.state_dict(), save_best)
+            save_model(current_epoch, save_best)
             LOGGER.info(f"---> Saved best: epoch: {current_epoch+1}, loss: {best_epoch_loss:>7f}")
         else:
             if current_epoch - best_epoch_no > cfgs.patience:

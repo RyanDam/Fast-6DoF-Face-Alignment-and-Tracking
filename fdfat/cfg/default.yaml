@@ -16,6 +16,7 @@ aux_pose: False # model with auxiliary pose esimation
 muliplier: 1.0 # model depth multiplier
 
 # training
+resume: False # resume training
 epoch: 100 # number of training epoch
 patience: 15 # number of epoch to adjust lr if val loss is not improve
 warmup: 2 # number of epoch to warmup model using lr0, after that use lr

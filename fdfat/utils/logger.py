@@ -2,7 +2,7 @@ import os
 import logging.config
 import pkg_resources as pkg
 
-from landmark import LOGGING_NAME, VERBOSE, MACOS, LINUX, WINDOWS
+from fdfat import LOGGING_NAME, VERBOSE, MACOS, LINUX, WINDOWS
 
 def check_version(current: str = '0.0.0',
                   minimum: str = '0.0.0',
