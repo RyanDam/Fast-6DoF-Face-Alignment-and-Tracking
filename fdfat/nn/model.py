@@ -1,10 +1,14 @@
 import torch
 from torch import nn
 
+from fdfat.utils.model_utils import intersect_dicts
+from fdfat.utils.logger import LOGGER
+
 from .conv import *
 from . import module
 from . import module2
 from . import module3
+
 class BaseModel(nn.Module):
 
     def __init__(self):
@@ -15,6 +19,20 @@ class BaseModel(nn.Module):
     
     def is_fused(self):
         return False
+    
+    def load(self, weights, verbose=True):
+        """Load the weights into the model.
+
+        Args:
+            weights (dict) or (torch.nn.Module): The pre-trained weights to be loaded.
+            verbose (bool, optional): Whether to log the transfer progress. Defaults to True.
+        """
+        model = weights['model'] if isinstance(weights, dict) else weights  # torchvision models are not dicts
+        csd = model.float().state_dict()  # checkpoint state_dict as FP32
+        csd = intersect_dicts(csd, self.state_dict())  # intersect
+        self.load_state_dict(csd, strict=False)  # load
+        if verbose:
+            LOGGER.info(f'Transferred {len(csd)}/{len(self.model.state_dict())} items from pretrained weights')
 
 class LightWeightModel(BaseModel):
 

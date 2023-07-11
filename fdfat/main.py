@@ -37,7 +37,7 @@ def do_train(cfg_: Union[str, Path, Dict, SimpleNamespace]):
 
     init_seeds(cfgs.seed)
 
-    save_dir = Path(increment_path(Path(cfgs.project) / cfgs.name, mkdir=cfgs.override==False))
+    save_dir = Path(increment_path(Path(cfgs.project) / cfgs.name, mkdir=not cfgs.resume))
     LOGGER.info(f"Project path: {save_dir}")
     save_wdir = save_dir / 'weights'  # weights dir
     save_wdir.mkdir(parents=True, exist_ok=True)  # make directory
@@ -77,14 +77,11 @@ def do_train(cfg_: Union[str, Path, Dict, SimpleNamespace]):
                                     persistent_workers=True,
                                     multiprocessing_context="spawn")
     start_epoch = 0
+    best_epoch_loss = 999
+    best_epoch_no = 0
+
     LOGGER.info(f"Load Model: {cfgs.model}")
     net = getattr(model, cfgs.model)(imgz=cfgs.imgsz, muliplier=cfgs.muliplier, pose_rotation=cfgs.aux_pose).to(cfgs.device)
-    # if cfgs.resume:
-    #     checkpoint = torch.load(save_best)
-    #     net.load_state_dict(checkpoint)
-    #     start_epoch = checkpoint['epoch']
-
-    _ = model_info(net, detailed=True, imgsz=cfgs.imgsz, device=cfgs.device)
 
     loss_fn = getattr(nn, cfgs.loss)(reduction='none')
     if cfgs.optimizer == "SGD":
@@ -92,24 +89,35 @@ def do_train(cfg_: Union[str, Path, Dict, SimpleNamespace]):
     else:
         optimizer = getattr(torch.optim, cfgs.optimizer)(net.parameters(), lr=cfgs.lr)
 
-    best_epoch_loss = 999
-    best_epoch_no = 0
-    start_train_time = time.time()
+    if cfgs.resume:
+        checkpoint = torch.load(save_best)
+        net.load(checkpoint)
+
+        start_epoch = checkpoint['epoch']
+        best_epoch_loss = checkpoint['best_fit']
+        best_epoch_no = checkpoint['best_epoch']
+
+    _ = model_info(net, detailed=True, imgsz=cfgs.imgsz, device=cfgs.device)
+
+    if cfgs.resume:
+        optimizer.load_state_dict(checkpoint['optimizer']) 
 
     scheduler_warmup = ConstantLR(optimizer, factor=cfgs.lr0_factor, total_iters=cfgs.warmup)
     scheduler_main = LinearLR(optimizer, start_factor=1, end_factor=0.1, total_iters=cfgs.epoch-cfgs.warmup)
-    scheduler = SequentialLR(optimizer, schedulers=[scheduler_warmup, scheduler_main], milestones=[cfgs.warmup])
+    scheduler = SequentialLR(optimizer, schedulers=[scheduler_warmup, scheduler_main], milestones=[cfgs.warmup], last_epoch=start_epoch)
 
-    # if not cfgs.resume:
-    with open(save_log_csv, "a") as f:
-        fields = '\t'.join(LMK_PART_NAMES)
-        fields_test = '\t'.join([f"test_{a}" for a in LMK_PART_NAMES])
-        f.write(f"epoch\ttotal\tnme\t{fields}\tpose\ttest_total\ttest_nme\t{fields_test}\ttest_pose\n")
+    if not cfgs.resume:
+        with open(save_log_csv, "a") as f:
+            fields = '\t'.join(LMK_PART_NAMES)
+            fields_test = '\t'.join([f"test_{a}" for a in LMK_PART_NAMES])
+            f.write(f"epoch\ttotal\tnme\t{fields}\tpose\ttest_total\ttest_nme\t{fields_test}\ttest_pose\n")
 
     def save_model(epoch, save_path):
         ckpt = {
             'epoch': epoch,
             'model': deepcopy(net).half(),
+            'best_fit': best_epoch_loss,
+            'best_epoch': best_epoch_no,
             'optimizer': optimizer.state_dict(),
             'train_args': cfgs,
             'date': datetime.now().isoformat(),
@@ -117,6 +125,7 @@ def do_train(cfg_: Union[str, Path, Dict, SimpleNamespace]):
         }
         torch.save(ckpt, save_path)
 
+    start_train_time = time.time()
     for current_epoch in range(start_epoch, cfgs.epoch):
         LOGGER.info(f"\n\nEPOCH {current_epoch+1}, lr: {scheduler.get_last_lr()[0]:>7f}")
         
@@ -143,16 +152,14 @@ def do_train(cfg_: Union[str, Path, Dict, SimpleNamespace]):
         generate_graph(save_log_csv, save_log_png)
 
         save_model(current_epoch, save_last)
-        # torch.save(net.state_dict(), save_last)
         if test_loss_dict["total"] < best_epoch_loss:
             best_epoch_loss = test_loss_dict["total"]
             best_epoch_no = current_epoch
-            # torch.save(net.state_dict(), save_best)
             save_model(current_epoch, save_best)
             LOGGER.info(f"---> Saved best: epoch: {current_epoch+1}, loss: {best_epoch_loss:>7f}")
         else:
             if current_epoch - best_epoch_no > cfgs.patience:
-                LOGGER.info(f"STOPPED in {int(time.time() - start_train_time)}s, due to no improvement after {current_epoch - best_epoch_no} epochs, best epoch: {best_epoch_no}, val loss: {best_epoch_loss:>7f}")
+                LOGGER.info(f"STOPPED due to no improvement after {current_epoch - best_epoch_no} epochs")
                 break
             
     LOGGER.info(f"DONE in {int(time.time() - start_train_time)}s, best epoch: {best_epoch_no}, val loss: {best_epoch_loss:>7f}")
