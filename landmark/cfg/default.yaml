@@ -30,3 +30,15 @@ dump_batch: 5 # write sample batch for debug
 save: True # save checkpoint and stats
 pin_memory: False # use pin memory for dataloader
 aux_pose_weight: 0.5 # loss weight for auxiliary pose esimation
+
+# trainning loss weights
+lossw_enabled: False
+w_jaw: 1.0
+w_leyeb: 1.0
+w_reyeb: 1.0
+w_nose: 1.0
+w_nosetip: 1.0
+w_leye: 1.0
+w_reye: 1.0
+w_mount: 1.0
+w_purpil: 1.0

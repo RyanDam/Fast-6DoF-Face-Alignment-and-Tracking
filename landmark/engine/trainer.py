@@ -1,12 +1,27 @@
 import tqdm
 from collections import defaultdict
 
+import torch
+
 from landmark.utils.utils import LMK_PARTS, LMK_PART_NAMES, render_batch
 from landmark import TQDM_BAR_FORMAT
 from landmark.metric.metric import nme
 
 def train_loop(cfgs, current_epoch, dataloader, model, loss_fn, optimizer, name="Train"):
     loss_dict = defaultdict(lambda: 0)
+
+    if cfgs.lossw_enabled:
+        loss_weight = torch.zeros((cfgs.batch_size, 70))
+        all_weights = [
+                cfgs.w_jaw, 
+                cfgs.w_leyeb, cfgs.w_reyeb, 
+                cfgs.w_nose, cfgs.w_nosetip, 
+                cfgs.w_leye, cfgs.w_reye, 
+                cfgs.w_mount, cfgs.w_purpil
+            ]
+        for idx, (b, e) in enumerate(LMK_PARTS):
+            loss_weight[:, b:e] = all_weights[idx]
+        loss_weight = loss_weight.to(cfgs.device)
 
     num_batches = len(dataloader)
     pbar = tqdm.tqdm(enumerate(dataloader), total=num_batches, bar_format=TQDM_BAR_FORMAT)
@@ -20,7 +35,11 @@ def train_loop(cfgs, current_epoch, dataloader, model, loss_fn, optimizer, name=
 
         if cfgs.aux_pose:
             loss = loss_fn(pred, y_device[:,:-1])
-            pose_weight = y_device[:,-1]
+
+            if cfgs.lossw_enabled:
+                loss[:, :70] *= loss_weight[:loss.shape[0], :]
+
+            pose_weight = y_device[:,-1:]
             loss[:,-3:] *= cfgs.aux_pose_weight * pose_weight
         else:
             loss = loss_fn(pred, y_device)

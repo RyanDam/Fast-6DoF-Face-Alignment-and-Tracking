@@ -3,7 +3,7 @@ import math
 import torch
 from torch import nn
 
-__all__ = ['autopad', 'Conv', 'DWConv', 'Concat', 'initialize_weights']
+__all__ = ['autopad', 'Conv', 'DWConv', 'Concat', 'IdentifyBlock', 'initialize_weights']
 
 def initialize_weights(model):
     """Initialize model weights to random values."""
@@ -64,3 +64,44 @@ class Concat(nn.Module):
     def forward(self, x):
         """Forward pass for the YOLOv8 mask Proto module."""
         return torch.cat(x, self.d)
+
+
+class IdentifyBlock(nn.Module):
+
+    default_act = nn.ReLU6()  # default activation
+
+    def __init__(self, in_ch, out_ch, expand, k=3, act=None, stride=1, dilation_rate=1):
+        super().__init__()
+
+        self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
+        
+        expand_ch = int(expand*in_ch)
+
+        # expansion
+        self.conv1 = Conv(in_ch, expand_ch, k=1, act=self.act)
+
+        # depthwise
+        self.conv2 = DWConv(expand_ch, expand_ch, k=k, s=stride, d=dilation_rate, act=self.act)
+
+        # squeeze
+        self.conv3 = Conv(expand_ch, out_ch, k=1, act=False)
+
+        self.need_fuse = in_ch == out_ch
+        self.need_pool = stride == 2
+        if self.need_fuse and self.need_pool:
+            self.pool = nn.MaxPool2d(2, stride=2)
+
+        initialize_weights(self)
+
+    def forward(self, x):
+        
+        ex = self.conv1(x)
+        de = self.conv2(ex)
+        sq = self.conv3(de)
+
+        if self.need_fuse:
+            if self.need_pool:
+                x = self.pool(x)
+            return sq + x
+        else:
+            return sq

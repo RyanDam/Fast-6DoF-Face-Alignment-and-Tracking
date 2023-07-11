@@ -22,7 +22,7 @@ def val_loop(cfgs, current_epoch, dataloader, model, loss_fn, name="Valid"):
 
             if cfgs.aux_pose:
                 loss = loss_fn(pred, y_device[:,:-1])
-                pose_weight = y_device[:,-1]
+                pose_weight = y_device[:,-1:]
                 loss[:,-3:] *= cfgs.aux_pose_weight * pose_weight
             else:
                 loss = loss_fn(pred, y_device)
