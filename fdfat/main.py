@@ -51,7 +51,7 @@ class BaseEngine:
         self.save_config = self.save_dir / 'config.yaml'
         if self.cfgs.task == "train":
             yaml_save(self.save_config, cfg2dict(self.cfgs))
-            
+
         yaml_print(self.cfgs)
 
         self.cfgs.save_dir = self.save_dir
@@ -251,12 +251,12 @@ class TrainEngine(BaseEngine):
             test_loss_dict = val_loop(self.cfgs, current_epoch, self.test_dataloader, self.net, self.loss_fn)
             self.scheduler.step()
 
-            if test_loss_dict["total"] < best_epoch_loss:
-                best_epoch_loss = test_loss_dict["total"]
-                best_epoch_no = current_epoch
+            if test_loss_dict["total"] < self.best_epoch_loss:
+                self.best_epoch_loss = test_loss_dict["total"]
+                self.best_epoch_no = current_epoch
             else:
-                if current_epoch - best_epoch_no > self.cfgs.patience:
-                    LOGGER.info(f"STOPPED due to no improvement after {current_epoch - best_epoch_no} epochs")
+                if current_epoch - self.best_epoch_no > self.cfgs.patience:
+                    LOGGER.info(f"STOPPED due to no improvement after {current_epoch - self.best_epoch_no} epochs")
                     break
             
             if self.cfgs.save:
@@ -279,11 +279,11 @@ class TrainEngine(BaseEngine):
                 generate_graph(self.save_log_csv, self.save_log_png)
 
                 self.save_model(current_epoch, self.save_last)
-                if best_epoch_no == current_epoch:
+                if self.best_epoch_no == current_epoch:
                     self.save_model(current_epoch, self.save_best)
-                    LOGGER.info(f"---> Saved best: epoch: {current_epoch+1}, loss: {best_epoch_loss:>7f}")
+                    LOGGER.info(f"---> Saved best: epoch: {current_epoch+1}, loss: {self.best_epoch_loss:>7f}")
 
-        LOGGER.info(f"DONE in {int(time.time() - start_train_time)}s, best epoch: {best_epoch_no}, val loss: {best_epoch_loss:>7f}")
+        LOGGER.info(f"DONE in {int(time.time() - start_train_time)}s, best epoch: {self.best_epoch_no}, val loss: {self.best_epoch_loss:>7f}")
 
 # def do_train(cfg_: Union[str, Path, Dict, SimpleNamespace]):
     
