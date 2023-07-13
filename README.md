@@ -1,4 +1,4 @@
-[![PyPI version](https://badge.fury.io/py/fdfat.svg)](https://badge.fury.io/py/fdfat)
+
 
 Working in progess...
 
@@ -15,11 +15,15 @@ This project purpose is to implement Ultra lightweight 6 DoF Face Alignment and 
 
 ### Install
 
+[![PyPI version](https://badge.fury.io/py/fdfat.svg)](https://badge.fury.io/py/fdfat)
+
 ```
 pip install -U fdfat
 ```
 
 ## Model Zoo
+
+TODO: add best model
 
 ## Training
 
@@ -27,11 +31,32 @@ pip install -U fdfat
 
 This project use 3d 68 points of landmark (difference from the original 300W dataset). Please go to [FaceSynthetics](https://github.com/microsoft/FaceSynthetics) to download the dataset (100K one) and extract it to your disk.
 
-Create your dataset yaml file with the following 
+Create your dataset yaml file with the following info:
+
+```yaml
+base_path: <path-to-face-synthesis-dataset>/dataset_100000
+train: <path-to-list-train-text-file.txt>
+val: <path-to-list-val-text-file.txt>
+test: <path-to-list-test-text-file.txt>
+```
+
+note: you can use list train file in `datasets/FaceSynthetics` for reference.
 
 ### Start training
 
+```bash
+fdfat --data <path-to-your-dataset-yaml> --model LightWeightModel
+```
+
+For complete list of parameter, please folow this sample config file: [fdfat/cfg/default.yaml](fdfat/cfg/default.yaml)
+
+## Validation
+
+TODO: Add validation task
+
 ## Predict
+
+TODO: Add predict task
 
 ## Credit
 
