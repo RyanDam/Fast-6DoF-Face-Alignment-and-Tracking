@@ -144,3 +144,9 @@ def select_device(device='', batch=0, newline=False, verbose=True):
 def intersect_dicts(da, db, exclude=()):
     """Returns a dictionary of intersecting keys with matching shapes, excluding 'exclude' keys, using da values."""
     return {k: v for k, v in da.items() if k in db and all(x not in k for x in exclude) and v.shape == db[k].shape}
+
+def preprocess(img_pil, imgsz):
+    img_pil = img_pil.resize((imgsz, imgsz))
+    img_np = np.array(img_pil)/127.5 - 1
+    img_np = np.transpose(img_np, [2, 0, 1])[np.newaxis, ...]
+    return img_np

@@ -2,8 +2,9 @@ import os, sys
 import argparse
 from types import SimpleNamespace
 
+from fdfat.utils.logger import LOGGER
 from fdfat.cfg import get_cfg
-from fdfat.main import do_train
+from fdfat.main import TrainEngine, ValEngine, TestEngine
 
 def entrypoint():
     default_cfg = get_cfg()
@@ -12,5 +13,24 @@ def entrypoint():
     for k, v in default_cfg:
         parser.add_argument(f"--{k}", type=type(v) if v is not None else str, default=v)
     args = parser.parse_args()
+    args = SimpleNamespace(**vars(args))
+    
+    if args.task == "train":
+        engine = TrainEngine(args)
+        engine.prepare()
+        engine.do_train()
+    elif args.task == "val":
+        engine = ValEngine(args)
+        engine.prepare()
+        engine.do_validate()
+    elif args.task == "predict":
+        engine = TestEngine(args)
 
-    do_train(SimpleNamespace(**vars(args)))
+        if args.input is None:
+            raise ValueError("Input is empty")
+
+        lmk, rendered = engine.predict(args.input, render=True)
+
+        rendered.save("predict.jpg")
+
+    # do_train(SimpleNamespace(**vars(args)))

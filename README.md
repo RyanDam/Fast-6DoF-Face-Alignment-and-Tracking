@@ -52,11 +52,15 @@ For complete list of parameter, please folow this sample config file: [fdfat/cfg
 
 ## Validation
 
-TODO: Add validation task
+```bash
+fdfat --task val --data <path-to-your-dataset-yaml> --model LightWeightModel
+```
 
 ## Predict
 
-TODO: Add predict task
+```bash
+fdfat --task predict --model LightWeightModel --checkpoint <path-to-checkoint> --input <path-to-test-img>
+```
 
 ## Credit
 
