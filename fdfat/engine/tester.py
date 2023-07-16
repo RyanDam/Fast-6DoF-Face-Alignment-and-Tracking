@@ -1,56 +1,49 @@
-import tqdm
-import torch
-from collections import defaultdict
+import time
+import numpy as np
+from PIL import Image
+from pathlib import Path
+from typing import Dict, Union
+from types import SimpleNamespace
 
-from fdfat.utils.utils import LMK_PARTS, LMK_PART_NAMES, render_batch
-from fdfat import TQDM_BAR_FORMAT
-from fdfat.metric.metric import nme
+from fdfat import __version__
+from fdfat.utils.logger import LOGGER
+from fdfat.engine.base import BaseEngine
+from fdfat.utils.model_utils import preprocess
+from fdfat.utils.utils import render_lmk
 
-def test_loop(cfgs, dataloader, model, loss_fn, name="Test"):
+class TestEngine(BaseEngine):
 
-    loss_dict = defaultdict(lambda: 0)
+    def __init__(self, cfg_: Union[str, Path, Dict, SimpleNamespace]):
+        super().__init__(cfg_)
+        self.load_model()
 
-    num_batches = len(dataloader)
-    pbar = tqdm.tqdm(enumerate(dataloader), total=num_batches, bar_format=TQDM_BAR_FORMAT)
+        self.target_checkpoint_path = self.cfgs.checkpoint if self.cfgs.checkpoint is not None else self.save_best
+        self.load_checkpoint(self.target_checkpoint_path)
 
-    model.eval()
-    with torch.no_grad():
-        for batch, (x, y) in pbar:
-            x_device = x.to(cfgs.device, non_blocking=True)
-            y_device = y.to(cfgs.device, non_blocking=True)
+        self.net.eval()
 
-            pred = model(x_device)
+    def predict(self, input, render=False):
 
-            if cfgs.aux_pose:
-                loss = loss_fn(pred, y_device[:,:-1])
-                pose_weight = y_device[:,-1:]
-                loss[:,-3:] *= cfgs.aux_pose_weight * pose_weight
-            else:
-                loss = loss_fn(pred, y_device)
+        if isinstance(input, str):
+            input = Image.open(input)
 
-            total_loss = loss.mean()
+        preprocessed = preprocess(input, self.cfgs.imgsz)
+        preprocessed = torch.from_numpy(preprocessed.astype(np.float32)).to(self.cfgs.device)
+        with torch.no_grad():
+            if self.cfgs.test_warmup:
+                for _ in range(5):
+                    _ = self.net(preprocessed)
+            start = time.time()
+            y = self.net(preprocessed)
+            y = y.detach().cpu().numpy()
+            end = time.time()
 
-            loss_dict["total"] += total_loss.item()
+        LOGGER.info(f"Predicted in {int((end-start)*1000):d}ms")
 
-            nme_loss = nme(pred[:,:68*2], y_device[:,:68*2], reduced=False)
+        lmk = y[0][:70*2].reshape((70,2))
 
-            loss_dict["nme_mean_parts"] += nme_loss.mean(dim=0)
+        if render:
+            rendered = render_lmk(input.copy(), (lmk+0.5)*input.size[0], point_size=1)
+            return lmk, rendered
 
-            loss_dict["nme"] += nme_loss.mean()
-            for (b, e), pname in zip(LMK_PARTS, LMK_PART_NAMES):
-                loss_dict[pname] += loss[:, b*2:e*2].mean().item()
-
-            losses_str = f"Total: {loss_dict['total']/(batch+1):>7f}, nmei: {loss_dict['nme']/(batch+1):>7f}"
-            for n in LMK_PART_NAMES:
-                losses_str = f"{losses_str}, {n}: {loss_dict[n]/(batch+1):>7f}"
-
-            if cfgs.aux_pose:
-                loss_dict["pose"] += (loss[:,-3:] / cfgs.aux_pose_weight).mean().item()
-                losses_str = f"{losses_str}, pose: {loss_dict['pose']/(batch+1):>7f}"
-
-            pbar.set_description(f"{name} {losses_str}")
-
-    for k in loss_dict.keys():
-        loss_dict[k] /= num_batches
-
-    return loss_dict
+        return lmk

@@ -23,13 +23,13 @@ checkpoint: # target checkpoint to load
 resume: False # resume training
 epoch: 100 # number of training epoch
 patience: 15 # number of epoch to adjust lr if val loss is not improve
-warmup: 2 # number of epoch to warmup model using lr0, after that use lr
+warmup_epoch: 2 # number of epoch to warmup model using lr0, after that use lr
 optimizer: SGD # torch.optim class
 loss: L1Loss # torch.nn class
 lr: 0.01  # main learning rate (i.e. SGD=1E-2, Adam=1E-3)
 batch_size: 32 # batchsize
 lr0_factor: 0.01  # initial learning rate factor
-lr_factor: 0.1 # new_lr = current_lr*lr_factor after patience epoch
+lre_factor: 0.1 # end_lr = current_lr*lr_factor at the end of the trainning
 device: cpu # target device, ie. cuda device=0 or device=0,1,2,3 or device=cpu
 dump_batch: 5 # write sample batch for debug
 save: True # save checkpoint and stats
@@ -37,7 +37,7 @@ pin_memory: False # use pin memory for dataloader
 aux_pose_weight: 0.5 # loss weight for auxiliary pose esimation
 
 # testing
-warmup: True # warming up model when testing
+test_warmup: True # warming up model when testing
 
 # trainning loss weights
 lossw_enabled: False

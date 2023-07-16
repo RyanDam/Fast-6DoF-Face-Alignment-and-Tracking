@@ -70,7 +70,7 @@ class IdentifyBlock(nn.Module):
 
     default_act = nn.ReLU6()  # default activation
 
-    def __init__(self, in_ch, out_ch, expand, k=3, act=None, stride=1, dilation_rate=1):
+    def __init__(self, in_ch, out_ch, expand, k=3, act=True, stride=1, dilation_rate=1):
         super().__init__()
 
         self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()

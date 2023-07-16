@@ -1,10 +1,10 @@
-import os, sys
 import argparse
 from types import SimpleNamespace
 
 from fdfat.utils.logger import LOGGER
 from fdfat.cfg import get_cfg
-from fdfat.main import TrainEngine, ValEngine, TestEngine
+# from fdfat.main import TrainEngine, ValEngine, TestEngine
+from fdfat.engine import trainer, validator, tester
 
 def entrypoint():
     default_cfg = get_cfg()
@@ -16,21 +16,16 @@ def entrypoint():
     args = SimpleNamespace(**vars(args))
     
     if args.task == "train":
-        engine = TrainEngine(args)
+        engine = trainer.TrainEngine(args)
         engine.prepare()
         engine.do_train()
     elif args.task == "val":
-        engine = ValEngine(args)
+        engine = validator.ValEngine(args)
         engine.prepare()
         engine.do_validate()
     elif args.task == "predict":
-        engine = TestEngine(args)
-
+        engine = tester.TestEngine(args)
         if args.input is None:
             raise ValueError("Input is empty")
-
         lmk, rendered = engine.predict(args.input, render=True)
-
         rendered.save("predict.jpg")
-
-    # do_train(SimpleNamespace(**vars(args)))

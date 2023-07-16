@@ -1,54 +1,61 @@
-import tqdm
+import time
+from pathlib import Path
+from typing import Dict, Union
+from types import SimpleNamespace
+
 import torch
-from collections import defaultdict
+from torch.utils.data import DataLoader
 
-from fdfat.utils.utils import LMK_PARTS, LMK_PART_NAMES, render_batch
-from fdfat import TQDM_BAR_FORMAT
-from fdfat.metric.metric import nme
+from fdfat import __version__
+from fdfat.utils.logger import LOGGER
+from fdfat.engine.base import BaseEngine
+from fdfat.data.dataloader import LandmarkDataset
+from fdfat.utils.utils import LMK_PART_NAMES, read_file_list, render_lmk, generate_graph
 
-def val_loop(cfgs, current_epoch, dataloader, model, loss_fn, name="Valid"):
-    loss_dict = defaultdict(lambda: 0)
+from fdfat.engine.loop.validator import val_loop
 
-    num_batches = len(dataloader)
-    pbar = tqdm.tqdm(enumerate(dataloader), total=num_batches, bar_format=TQDM_BAR_FORMAT)
+class ValEngine(BaseEngine):
 
-    model.eval()
-    with torch.no_grad():
-        for batch, (x, y) in pbar:
-            x_device = x.to(cfgs.device, non_blocking=True)
-            y_device = y.to(cfgs.device, non_blocking=True)
+    def __init__(self, cfg_: Union[str, Path, Dict, SimpleNamespace]):
+        super().__init__(cfg_)
+        self.load_database()
+        self.load_model()
+    
+    def load_database(self):
 
-            pred = model(x_device)
+        self.target_data_path = self.cfgs.data.val
+        if self.cfgs.validation == "train":
+            self.target_data_path = self.cfgs.data.train
+        elif self.cfgs.validation == "test":
+            self.target_data_path = self.cfgs.data.test
 
-            if cfgs.aux_pose:
-                loss = loss_fn(pred, y_device[:,:-1])
-                pose_weight = y_device[:,-1:]
-                loss[:,-3:] *= cfgs.aux_pose_weight * pose_weight
-            else:
-                loss = loss_fn(pred, y_device)
+        LOGGER.info(f"Load {self.cfgs.validation} data")
 
-            total_loss = loss.mean()
+        self.dataset = LandmarkDataset(self.cfgs, read_file_list(self.target_data_path, base_path=self.cfgs.data.base_path), 
+                                        imgsz=self.cfgs.imgsz, 
+                                        pose_rotation=self.cfgs.aux_pose, 
+                                        aug=False)
+        self.dataloader = DataLoader(self.dataset, batch_size=self.cfgs.batch_size, shuffle=False,
+                                        pin_memory=self.cfgs.pin_memory,
+                                        num_workers=self.cfgs.workers,
+                                        persistent_workers=True,
+                                        multiprocessing_context="spawn")
+        
+        LOGGER.info("Load database DONE")
 
-            loss_dict["total"] += total_loss.item()
-            loss_dict["nme"] += nme(pred[:,:68*2], y_device[:,:68*2]).mean()
-            for (b, e), pname in zip(LMK_PARTS, LMK_PART_NAMES):
-                loss_dict[pname] += loss[:, b*2:e*2].mean().item()
+    def prepare(self):
+        self.target_checkpoint_path = self.cfgs.checkpoint if self.cfgs.checkpoint is not None else self.save_best
+        checkpoint = torch.load(self.target_checkpoint_path)
+        self.load_checkpoint(checkpoint)
 
-            losses_str = f"Total: {loss_dict['total']/(batch+1):>7f}, nmei: {loss_dict['nme']/(batch+1):>7f}"
-            for n in LMK_PART_NAMES:
-                losses_str = f"{losses_str}, {n}: {loss_dict[n]/(batch+1):>7f}"
+        self.loss_fn = getattr(nn, self.cfgs.loss)(reduction='none')
 
-            if cfgs.aux_pose:
-                loss_dict["pose"] += (loss[:,-3:] / cfgs.aux_pose_weight).mean().item()
-                losses_str = f"{losses_str}, pose: {loss_dict['pose']/(batch+1):>7f}"
+    def do_validate(self, verbose=True):
+        start_time = time.time()
+        loss_dict = val_loop(self.cfgs, 0, self.dataloader, self.net, self.loss_fn)
+        LOGGER.info(f"DONE in {int(time.time() - start_time)}s")
 
-            pbar.set_description(f"{name} epoch [{current_epoch+1:3d}/{cfgs.epoch:3d}] {losses_str}")
+        if verbose:
+            print(loss_dict)
 
-            if current_epoch == 0 and batch < cfgs.dump_batch:
-                save_batch_png = cfgs.save_dir / f'{name}_batch{batch}.png'
-                render_batch(x.cpu().detach().numpy(), y[:,:70*2].cpu().detach().numpy(), save_batch_png)
-
-    for k in loss_dict.keys():
-        loss_dict[k] /= num_batches
-
-    return loss_dict
+        return loss_dict

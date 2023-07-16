@@ -6,9 +6,6 @@ from fdfat.utils.logger import LOGGER
 
 from .conv import *
 from . import module
-from . import module2
-from . import module3
-from . import module4
 
 class BaseModel(nn.Module):
 
@@ -53,131 +50,8 @@ class LightWeightModel(BaseModel):
         if pose_rotation:
             self.aux = module.AuxiliaryBackbone(int(16*muliplier), 3, muliplier=muliplier)
             
-        output_ch = int((64 + 64 + 64)*muliplier)
+        output_ch = int((128 + 128 + 128)*muliplier)
         self.logit = module.FERegress(output_ch, 70*2)
-
-        self.concat = Concat()
-
-        initialize_weights(self)
-
-    def forward(self, x):
-
-        x = self.backbone(x)
-        
-        if self.pose_rotation:
-            aux = self.aux(x)
-
-        x = self.mainstream(x)
-        
-        x = self.logit(x)
-
-        if self.pose_rotation:
-            x = self.concat([x, aux])
-
-        return x
-    
-class LightWeightModelR2(BaseModel):
-
-    def __init__(self, imgz=128, muliplier=1, pose_rotation=False):
-        super().__init__()
-        self.pose_rotation = pose_rotation
-
-        # backbone, output size = size/4
-        self.backbone = module2.LightWeightBackbone(muliplier=muliplier)
-
-        # mainstream, output size:
-        # x1 = size/8
-        # x2 = size/16
-        # x3 = size/16
-        self.mainstream = module2.MainStreamModule(muliplier=muliplier)
-
-        if pose_rotation:
-            self.aux = module2.AuxiliaryBackbone(int(16*muliplier), 3, muliplier=muliplier)
-            
-        output_ch = int((128 + 128 + 128)*muliplier)
-        self.logit = module2.FERegress(output_ch, 70*2)
-
-        self.concat = Concat()
-
-        initialize_weights(self)
-
-    def forward(self, x):
-
-        x = self.backbone(x)
-        
-        if self.pose_rotation:
-            aux = self.aux(x)
-
-        x = self.mainstream(x)
-        
-        x = self.logit(x)
-
-        if self.pose_rotation:
-            x = self.concat([x, aux])
-
-        return x
-
-class LightWeightModelR3(BaseModel):
-
-    def __init__(self, imgz=128, muliplier=1, pose_rotation=False):
-        super().__init__()
-        self.pose_rotation = pose_rotation
-
-        # backbone, output size = size/4
-        self.backbone = module3.LightWeightBackbone(muliplier=muliplier)
-
-        # mainstream, output size:
-        # x1 = size/8
-        # x2 = size/16
-        # x3 = size/16
-        self.mainstream = module3.MainStreamModule(muliplier=muliplier)
-
-        if pose_rotation:
-            self.aux = module3.AuxiliaryBackbone(int(16*muliplier), 3, muliplier=muliplier)
-            
-        output_ch = int((128 + 128 + 128)*muliplier)
-        self.logit = module3.FERegress(output_ch, 70*2)
-
-        self.concat = Concat()
-
-        initialize_weights(self)
-
-    def forward(self, x):
-
-        x = self.backbone(x)
-        
-        if self.pose_rotation:
-            aux = self.aux(x)
-
-        x = self.mainstream(x)
-        
-        x = self.logit(x)
-
-        if self.pose_rotation:
-            x = self.concat([x, aux])
-
-        return x
-
-class LightWeightModelR4(BaseModel):
-
-    def __init__(self, imgz=128, muliplier=1, pose_rotation=False):
-        super().__init__()
-        self.pose_rotation = pose_rotation
-
-        # backbone, output size = size/4
-        self.backbone = module4.LightWeightBackbone(muliplier=muliplier)
-
-        # mainstream, output size:
-        # x1 = size/8
-        # x2 = size/16
-        # x3 = size/16
-        self.mainstream = module4.MainStreamModule(muliplier=muliplier)
-
-        if pose_rotation:
-            self.aux = module4.AuxiliaryBackbone(int(16*muliplier), 3, muliplier=muliplier)
-            
-        output_ch = int((128 + 128 + 128)*muliplier)
-        self.logit = module4.FERegress(output_ch, 70*2)
 
         self.concat = Concat()
 
