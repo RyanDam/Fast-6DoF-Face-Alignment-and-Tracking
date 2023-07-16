@@ -150,3 +150,7 @@ def preprocess(img_pil, imgsz):
     img_np = np.array(img_pil)/127.5 - 1
     img_np = np.transpose(img_np, [2, 0, 1])[np.newaxis, ...]
     return img_np
+
+def get_latest_opset():
+    """Return second-most (for maturity) recently supported ONNX opset by this version of torch."""
+    return max(int(k[14:]) for k in vars(torch.onnx) if 'symbolic_opset' in k) - 1  # opset

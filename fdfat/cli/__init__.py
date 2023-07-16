@@ -3,8 +3,8 @@ from types import SimpleNamespace
 
 from fdfat.utils.logger import LOGGER
 from fdfat.cfg import get_cfg
-# from fdfat.main import TrainEngine, ValEngine, TestEngine
-from fdfat.engine import trainer, validator, tester
+# from fdfat.main import TrainEngine, ValEngine, TestEngine, 
+from fdfat.engine import trainer, validator, tester, exporter
 
 def entrypoint():
     default_cfg = get_cfg()
@@ -29,3 +29,6 @@ def entrypoint():
             raise ValueError("Input is empty")
         lmk, rendered = engine.predict(args.input, render=True)
         rendered.save("predict.jpg")
+    elif args.task == "export":
+        engine = exporter.ExportEngine(args)
+        engine.export()
