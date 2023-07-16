@@ -29,7 +29,7 @@ def gen_bbox(lmk, scale=[1.4, 1.6], offset=0.2, square=True):
 
     return np.vstack([center-size/2, center+size/2])
 
-def read_data(img_path, lmk_scale=1.0, aug=None, imgsz=128):
+def read_data(img_path, lmk_scale=1.0, aug=None, imgsz=128, norm=True):
     img = Image.open(img_path)
     lmk_path = img_path.replace(".png", "_ldmks.txt")
     with open(lmk_path, 'r') as f:
@@ -48,26 +48,23 @@ def read_data(img_path, lmk_scale=1.0, aug=None, imgsz=128):
         lmk = transformed['keypoints']
         lmk = np.array(lmk)
 
-    croped = (croped / 127.5) - 1
-
     # normalize
     lmk /= imgsz
     lmk -= 0.5
     lmk *= lmk_scale
+    lmk = lmk.astype(np.float32)
 
-    # bbox_center = (bbox[0, :] + bbox[1, :]) / 2
-    # lmk[:,0] -= bbox_center[0]
-    # lmk[:,1] -= bbox_center[1]
-    # lmk[:,0] /= croped.size[0]
-    # lmk[:,1] /= croped.size[1]
-    # lmk[:,0] *= lmk_scale
-    # lmk[:,1] *= lmk_scale
-    # lmk = lmk.astype(np.float32)
+    if norm:
+        croped = (croped / 127.5) - 1
+        croped = croped.astype(np.float32)
+    else:
+        croped.astype(np.uint8)
 
-    return croped.astype(np.float32), lmk.astype(np.float32)
+    return croped, lmk
 
 class LandmarkDataset(Dataset):
     def __init__(self, cfgs, annotations_files, imgsz=128, aug=True, pose_rotation=False):
+        self.norm = cfgs.pre_norm
         self.img_paths = annotations_files
         self.imgsz = imgsz
         self.pose_rotation = pose_rotation
@@ -107,7 +104,7 @@ class LandmarkDataset(Dataset):
     def __getitem__(self, idx):
         img_path = self.img_paths[idx]
 
-        img, lmk = read_data(img_path, aug=self.aug, imgsz=self.imgsz)
+        img, lmk = read_data(img_path, aug=self.aug, imgsz=self.imgsz, norm=self.norm)
         
         if self.pose_rotation:
             estimator = PoseEstimator(self.imgsz, self.imgsz)

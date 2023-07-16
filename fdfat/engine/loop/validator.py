@@ -16,6 +16,8 @@ def val_loop(cfgs, current_epoch, dataloader, model, loss_fn, name="Valid"):
     with torch.no_grad():
         for batch, (x, y) in pbar:
             x_device = x.to(cfgs.device, non_blocking=True)
+            if not cfgs.pre_norm:
+                x_device = ((x_device / 127.5) - 1).type(torch.float32)
             y_device = y.to(cfgs.device, non_blocking=True)
 
             pred = model(x_device)
@@ -46,7 +48,7 @@ def val_loop(cfgs, current_epoch, dataloader, model, loss_fn, name="Valid"):
 
             if current_epoch == 0 and batch < cfgs.dump_batch:
                 save_batch_png = cfgs.save_dir / f'{name}_batch{batch}.png'
-                render_batch(x.cpu().detach().numpy(), y[:,:70*2].cpu().detach().numpy(), save_batch_png)
+                render_batch(x_device.cpu().detach().numpy(), y_device[:,:70*2].cpu().detach().numpy(), save_batch_png)
 
     for k in loss_dict.keys():
         loss_dict[k] /= num_batches

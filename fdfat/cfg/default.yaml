@@ -11,6 +11,7 @@ workers: 8 # number of workers for dataloader
 aug: 0.5 # aug
 input: # input file path/url for prediction
 validation: val # validation target set in the data yaml, one of train, val, test
+pre_norm: true # normalize data in dataloader instead of normalizing right before feeding to model 
 
 # model
 model: # modelname
