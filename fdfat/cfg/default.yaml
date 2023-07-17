@@ -3,7 +3,7 @@ task: train # train, val, predict, export
 name: Landmark # name of experiment
 project: # path to project folder
 seed: 0  # random seed for reproducibility
-override: false # overide project if any, otherwise it will created a new project
+override: False # overide project if any, otherwise it will created a new project
 
 # data
 data: # path to dataset file, ie. face_synth.yaml
@@ -11,17 +11,17 @@ workers: 8 # number of workers for dataloader
 aug: 0.5 # aug
 input: # input file path/url for prediction
 validation: val # validation target set in the data yaml, one of train, val, test
-pre_norm: true # normalize data in dataloader instead of normalizing right before feeding to model 
+pre_norm: True # normalize data in dataloader instead of normalizing right before feeding to model 
 
 # model
 model: LightWeightModel # modelname
 imgsz: 128 # size of input image as integer
-aux_pose: true # model with auxiliary pose esimation
+aux_pose: True # model with auxiliary pose esimation
 muliplier: 1.0 # model depth multiplier
 checkpoint: # target checkpoint to load
 
 # training
-resume: false # resume training
+resume: False # resume training
 epoch: 500 # number of training epoch
 patience: 10 # number of epoch to adjust lr if val loss is not improve
 warmup_epoch: 2 # number of epoch to warmup model using lr0, after that use lr
@@ -33,12 +33,12 @@ lr0_factor: 0.01  # initial learning rate factor
 lre_factor: 0.1 # end_lr = current_lr*lr_factor at the end of the trainning
 device: cpu # target device, ie. cuda device=0 or device=0,1,2,3 or device=cpu
 dump_batch: 5 # write sample batch for debug
-save: true # save checkpoint and stats
-pin_memory: false # use pin memory for dataloader
+save: True # save checkpoint and stats
+pin_memory: False # use pin memory for dataloader
 aux_pose_weight: 0.5 # loss weight for auxiliary pose esimation
 
 # trainning loss weights
-lossw_enabled: false
+lossw_enabled: False
 w_jaw: 1.0
 w_leyeb: 1.0
 w_reyeb: 1.0
@@ -54,5 +54,4 @@ test_warmup: True # warming up model when testing
 
 # export
 export_format: tflite # torchscript, onnx, saved_model, tflite
-export_pose: false # export with aux pose estimation
-export_simplify: true # simplify onnx model using onnxsim
+export_simplify: True # simplify onnx model using onnxsim
