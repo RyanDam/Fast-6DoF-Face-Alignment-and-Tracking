@@ -15,7 +15,7 @@ class ExportEngine(BaseEngine):
 
     def __init__(self, cfg_: Union[str, Path, Dict, SimpleNamespace]):
         super().__init__(cfg_)
-        self.load_model(track_running_stats=True) # prevent miss behaviour with batchnorm not in eval mode
+        self.load_model() # prevent miss behaviour with batchnorm not in eval mode
 
         self.target_checkpoint_path = self.cfgs.checkpoint if self.cfgs.checkpoint is not None else self.save_best
         self.load_checkpoint(self.target_checkpoint_path)

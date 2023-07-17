@@ -55,10 +55,12 @@ class BaseEngine:
     def prepare(self):
         raise NotImplementedError("Not implemented")
 
-    def load_model(self, verbose=True, track_running_stats=False):
+    def load_model(self, verbose=True):
         LOGGER.info(f"Load model: {self.cfgs.model}")
-        self.net = getattr(model, self.cfgs.model)(imgz=self.cfgs.imgsz, muliplier=self.cfgs.muliplier, pose_rotation=self.cfgs.aux_pose, track_running_stats=track_running_stats).to(self.cfgs.device)
+        self.net = getattr(model, self.cfgs.model)(imgz=self.cfgs.imgsz, muliplier=self.cfgs.muliplier, pose_rotation=self.cfgs.aux_pose).to(self.cfgs.device)
         if verbose:
+            # need to call this before getting model info to prevent abnormal batchnorm
+            self.net.eval()
             _ = model_info(self.net, detailed=True, imgsz=self.cfgs.imgsz, device=self.cfgs.device)
 
     def load_checkpoint(self, checkpoint, map_location='cpu'):

@@ -31,10 +31,7 @@ class ValEngine(BaseEngine):
 
         LOGGER.info(f"Load {self.cfgs.validation} data")
 
-        self.dataset = LandmarkDataset(self.cfgs, read_file_list(self.target_data_path, base_path=self.cfgs.data.base_path), 
-                                        imgsz=self.cfgs.imgsz, 
-                                        pose_rotation=self.cfgs.aux_pose, 
-                                        aug=False)
+        self.dataset = LandmarkDataset(self.cfgs, read_file_list(self.target_data_path, base_path=self.cfgs.data.base_path), aug=False)
         self.dataloader = DataLoader(self.dataset, batch_size=self.cfgs.batch_size, shuffle=False,
                                         pin_memory=self.cfgs.pin_memory,
                                         num_workers=self.cfgs.workers,

@@ -7,21 +7,21 @@ class LightWeightBackbone(nn.Module):
 
     default_act = nn.ReLU6()  # default activation
 
-    def __init__(self, expand_rate=2, muliplier=1, act=True, track_running_stats=False):
+    def __init__(self, expand_rate=2, muliplier=1, act=True):
         super().__init__()
 
         self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
 
         # early dropout
-        self.conv11 = Conv(3, 16, k=3, s=2, act=nn.PReLU(), track_running_stats=track_running_stats)
+        self.conv11 = Conv(3, 16, k=3, s=2, act=nn.PReLU())
 
-        self.conv21 = IdentifyBlock(16, int(16*muliplier), expand_rate, stride=2, act=self.act, track_running_stats=track_running_stats)
-        self.conv22 = IdentifyBlock(int(16*muliplier), int(16*muliplier), expand_rate, act=self.act, track_running_stats=track_running_stats)
-        self.conv23 = IdentifyBlock(int(16*muliplier), int(16*muliplier), expand_rate, act=self.act, track_running_stats=track_running_stats)
-        self.conv24 = IdentifyBlock(int(16*muliplier), int(16*muliplier), expand_rate, act=self.act, track_running_stats=track_running_stats)
-        self.conv25 = IdentifyBlock(int(16*muliplier), int(16*muliplier), expand_rate, act=self.act, track_running_stats=track_running_stats)
+        self.conv21 = IdentifyBlock(16, int(16*muliplier), expand_rate, stride=2, act=self.act)
+        self.conv22 = IdentifyBlock(int(16*muliplier), int(16*muliplier), expand_rate, act=self.act)
+        self.conv23 = IdentifyBlock(int(16*muliplier), int(16*muliplier), expand_rate, act=self.act)
+        self.conv24 = IdentifyBlock(int(16*muliplier), int(16*muliplier), expand_rate, act=self.act)
+        self.conv25 = IdentifyBlock(int(16*muliplier), int(16*muliplier), expand_rate, act=self.act)
 
-        initialize_weights(self)
+        # initialize_weights(self)
 
     def forward(self, x):
 
@@ -38,23 +38,23 @@ class AuxiliaryBackbone(nn.Module):
 
     default_act = nn.ReLU6()  # default activation
 
-    def __init__(self, in_ch, out_ch, muliplier=1, act=True, track_running_stats=False):
+    def __init__(self, in_ch, out_ch, muliplier=1, act=True):
         super().__init__()
 
         self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
 
         self.stack1 = nn.Sequential(
             nn.Conv2d(in_ch, int(32*muliplier), 3, 2, autopad(3)),
-            nn.BatchNorm2d(int(32*muliplier), track_running_stats=track_running_stats),
+            nn.BatchNorm2d(int(32*muliplier)),
             self.act,
             nn.Conv2d(int(32*muliplier), int(64*muliplier), 3, 1, autopad(3)),
-            nn.BatchNorm2d(int(64*muliplier), track_running_stats=track_running_stats),
+            nn.BatchNorm2d(int(64*muliplier)),
             self.act,
             nn.Conv2d(int(64*muliplier), int(64*muliplier), 3, 2, autopad(3)),
-            nn.BatchNorm2d(int(64*muliplier), track_running_stats=track_running_stats),
+            nn.BatchNorm2d(int(64*muliplier)),
             self.act,
             nn.Conv2d(int(64*muliplier), int(128*muliplier), 3, 1, autopad(3)),
-            nn.BatchNorm2d(int(128*muliplier), track_running_stats=track_running_stats),
+            nn.BatchNorm2d(int(128*muliplier)),
             self.act,
             nn.AdaptiveAvgPool2d((1, 1)),
         )
@@ -66,7 +66,7 @@ class AuxiliaryBackbone(nn.Module):
             nn.Tanh()
         )
 
-        initialize_weights(self)
+        # initialize_weights(self)
 
     def forward(self, x):
 
@@ -79,30 +79,30 @@ class AuxiliaryBackbone(nn.Module):
 class MainStreamModule(nn.Module):
     default_act = nn.ReLU6()  # default activation
 
-    def __init__(self, expand_rate=2, muliplier=1, act=True, track_running_stats=False):
+    def __init__(self, expand_rate=2, muliplier=1, act=True):
         super().__init__()
 
         self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
 
-        self.conv11 = IdentifyBlock(int(16*muliplier), int(32*muliplier), expand_rate, stride=2, act=self.act, track_running_stats=track_running_stats)
+        self.conv11 = IdentifyBlock(int(16*muliplier), int(32*muliplier), expand_rate, stride=2, act=self.act)
 
-        self.conv21 = IdentifyBlock(int(32*muliplier), int(32*muliplier), expand_rate*2, stride=1, act=self.act, track_running_stats=track_running_stats)
-        self.conv22 = IdentifyBlock(int(32*muliplier), int(32*muliplier), expand_rate*2, stride=1, act=self.act, track_running_stats=track_running_stats)
-        self.conv23 = IdentifyBlock(int(32*muliplier), int(64*muliplier), expand_rate*2, stride=1, act=self.act, track_running_stats=track_running_stats)
-        self.conv24 = IdentifyBlock(int(64*muliplier), int(64*muliplier), expand_rate*2, stride=1, act=self.act, track_running_stats=track_running_stats)
-        self.conv25 = IdentifyBlock(int(64*muliplier), int(64*muliplier), expand_rate*2, stride=1, act=self.act, track_running_stats=track_running_stats)
+        self.conv21 = IdentifyBlock(int(32*muliplier), int(32*muliplier), expand_rate*2, stride=1, act=self.act)
+        self.conv22 = IdentifyBlock(int(32*muliplier), int(32*muliplier), expand_rate*2, stride=1, act=self.act)
+        self.conv23 = IdentifyBlock(int(32*muliplier), int(64*muliplier), expand_rate*2, stride=1, act=self.act)
+        self.conv24 = IdentifyBlock(int(64*muliplier), int(64*muliplier), expand_rate*2, stride=1, act=self.act)
+        self.conv25 = IdentifyBlock(int(64*muliplier), int(64*muliplier), expand_rate*2, stride=1, act=self.act)
 
         # Pyramic scale
-        self.convp1 = IdentifyBlock(int(64*muliplier), int(128*muliplier), expand_rate, stride=1, act=self.act, track_running_stats=track_running_stats)
-        self.convp2 = IdentifyBlock(int(128*muliplier), int(128*muliplier), expand_rate, stride=2, act=self.act, track_running_stats=track_running_stats)
-        self.convp3 = IdentifyBlock(int(128*muliplier), int(128*muliplier), expand_rate, stride=1, act=self.act, track_running_stats=track_running_stats)
+        self.convp1 = IdentifyBlock(int(64*muliplier), int(128*muliplier), expand_rate, stride=1, act=self.act)
+        self.convp2 = IdentifyBlock(int(128*muliplier), int(128*muliplier), expand_rate, stride=2, act=self.act)
+        self.convp3 = IdentifyBlock(int(128*muliplier), int(128*muliplier), expand_rate, stride=1, act=self.act)
         # self.convp2 = Conv(int(128*muliplier), int(128*muliplier), k=3, s=2, act=nn.SiLU())
         # self.convp3 = Conv(int(128*muliplier), int(128*muliplier), k=3, act=nn.SiLU())
 
         self.concat = Concat()
         self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
 
-        initialize_weights(self)
+        # initialize_weights(self)
 
     def forward(self, x):
 
@@ -129,7 +129,7 @@ class MainStreamModule(nn.Module):
     
 class FERegress(nn.Module):
 
-    def __init__(self, in_ch, out_ch, track_running_stats=False):
+    def __init__(self, in_ch, out_ch):
         super().__init__()
 
         self.stack = nn.Sequential(
@@ -139,7 +139,7 @@ class FERegress(nn.Module):
             nn.Tanh()
         )
 
-        initialize_weights(self)
+        # initialize_weights(self)
 
     def forward(self, x):
         x = self.stack(x)

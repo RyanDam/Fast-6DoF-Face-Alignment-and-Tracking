@@ -28,9 +28,7 @@ class TrainEngine(BaseEngine):
 
     def load_database(self):
         LOGGER.info("Load Train data")
-        self.dataset = LandmarkDataset(self.cfgs, read_file_list(self.cfgs.data.train, base_path=self.cfgs.data.base_path), 
-                                    imgsz=self.cfgs.imgsz, 
-                                    pose_rotation=self.cfgs.aux_pose)
+        self.dataset = LandmarkDataset(self.cfgs, read_file_list(self.cfgs.data.train, base_path=self.cfgs.data.base_path))
         self.train_dataloader = DataLoader(self.dataset, batch_size=self.cfgs.batch_size, shuffle=True, 
                                         pin_memory=self.cfgs.pin_memory,
                                         num_workers=self.cfgs.workers,
@@ -38,10 +36,7 @@ class TrainEngine(BaseEngine):
                                         multiprocessing_context="spawn")
 
         LOGGER.info("Load Val data")
-        self.dataset_test = LandmarkDataset(self.cfgs, read_file_list(self.cfgs.data.val, base_path=self.cfgs.data.base_path), 
-                                        imgsz=self.cfgs.imgsz, 
-                                        pose_rotation=self.cfgs.aux_pose, 
-                                        aug=False)
+        self.dataset_test = LandmarkDataset(self.cfgs, read_file_list(self.cfgs.data.val, base_path=self.cfgs.data.base_path), aug=False)
         self.test_dataloader = DataLoader(self.dataset_test, batch_size=self.cfgs.batch_size, shuffle=False,
                                         pin_memory=self.cfgs.pin_memory,
                                         num_workers=self.cfgs.workers,

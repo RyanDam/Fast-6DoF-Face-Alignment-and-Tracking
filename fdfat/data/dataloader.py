@@ -9,6 +9,7 @@ import albumentations as A
 import cv2
 
 from fdfat.utils.pose_estimation import PoseEstimator
+from fdfat.utils.model_utils import normalize_tensor
 
 POSE_ROTAION_MED = np.array([-0.02234655,  0.28259986, -2.98499613])
 POSE_ROTATION_STD = np.array([0.87680358, 0.53386852, 0.25789746])
@@ -29,7 +30,7 @@ def gen_bbox(lmk, scale=[1.4, 1.6], offset=0.2, square=True):
 
     return np.vstack([center-size/2, center+size/2])
 
-def read_data(img_path, lmk_scale=1.0, aug=None, imgsz=128, norm=True):
+def read_data(img_path, lmk_scale=1.0, aug=None, norm=True):
     img = Image.open(img_path)
     lmk_path = img_path.replace(".png", "_ldmks.txt")
     with open(lmk_path, 'r') as f:
@@ -49,13 +50,13 @@ def read_data(img_path, lmk_scale=1.0, aug=None, imgsz=128, norm=True):
         lmk = np.array(lmk)
 
     # normalize
-    lmk /= imgsz
+    lmk /= croped.shape[1]
     lmk -= 0.5
     lmk *= lmk_scale
     lmk = lmk.astype(np.float32)
 
     if norm:
-        croped = (croped / 127.5) - 1
+        croped = normalize_tensor(croped)
         croped = croped.astype(np.float32)
     else:
         croped.astype(np.uint8)
@@ -63,11 +64,11 @@ def read_data(img_path, lmk_scale=1.0, aug=None, imgsz=128, norm=True):
     return croped, lmk
 
 class LandmarkDataset(Dataset):
-    def __init__(self, cfgs, annotations_files, imgsz=128, aug=True, pose_rotation=False):
+    def __init__(self, cfgs, annotations_files, aug=True, pose_rotation=False):
         self.norm = cfgs.pre_norm
         self.img_paths = annotations_files
-        self.imgsz = imgsz
-        self.pose_rotation = pose_rotation
+        self.imgsz = cfgs.imgsz
+        self.pose_rotation = cfgs.aux_pose
 
         if aug:
             self.aug = A.Compose([
@@ -87,11 +88,11 @@ class LandmarkDataset(Dataset):
                 ], p=0.1),
                 A.ISONoise(p=0.2),
                 A.ImageCompression(quality_lower=50, quality_upper=90, p=0.5),
-                A.Resize(imgsz, imgsz)
+                A.Resize(self.imgsz, self.imgsz)
             ], keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
         else:
             self.aug = A.Compose([
-                A.Resize(imgsz, imgsz)
+                A.Resize(self.imgsz, self.imgsz)
             ], keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
         
         self.trans = transforms.ToTensor()
@@ -104,7 +105,7 @@ class LandmarkDataset(Dataset):
     def __getitem__(self, idx):
         img_path = self.img_paths[idx]
 
-        img, lmk = read_data(img_path, aug=self.aug, imgsz=self.imgsz, norm=self.norm)
+        img, lmk = read_data(img_path, aug=self.aug, norm=self.norm)
         
         if self.pose_rotation:
             estimator = PoseEstimator(self.imgsz, self.imgsz)

@@ -6,6 +6,7 @@ import torch
 from fdfat.utils.utils import LMK_PARTS, LMK_PART_NAMES, render_batch
 from fdfat import TQDM_BAR_FORMAT
 from fdfat.metric.metric import nme
+from fdfat.utils.model_utils import normalize_tensor
 
 def train_loop(cfgs, current_epoch, dataloader, model, loss_fn, optimizer, name="Train"):
     loss_dict = defaultdict(lambda: 0)
@@ -30,7 +31,7 @@ def train_loop(cfgs, current_epoch, dataloader, model, loss_fn, optimizer, name=
     for batch, (x, y) in pbar:
         x_device = x.to(cfgs.device, non_blocking=True)
         if not cfgs.pre_norm:
-            x_device = ((x_device / 127.5) - 1).type(torch.float32)
+            x_device = normalize_tensor(x_device).type(torch.float32)
         y_device = y.to(cfgs.device, non_blocking=True)
 
         pred = model(x_device)

@@ -83,6 +83,7 @@ def init_seeds(seed=0, deterministic=False):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
+    torch.mps.manual_seed(seed)  # for Multi-GPU, exception safe
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)  # for Multi-GPU, exception safe
     # torch.backends.cudnn.benchmark = True  # AutoBatch problem https://github.com/ultralytics/yolov5/issues/9287
@@ -147,9 +148,14 @@ def intersect_dicts(da, db, exclude=()):
 
 def preprocess(img_pil, imgsz):
     img_pil = img_pil.resize((imgsz, imgsz))
-    img_np = np.array(img_pil)/127.5 - 1
+    img_np = normalize_tensor(np.array(img_pil))
     img_np = np.transpose(img_np, [2, 0, 1])[np.newaxis, ...]
     return img_np
+
+def normalize_tensor(tensor):
+    return tensor/127.5 - 1
+    # return tensor/255
+    # return (tensor/255 - 0.44531356896770125 ) / 0.2692461874154524
 
 def get_latest_opset():
     """Return second-most (for maturity) recently supported ONNX opset by this version of torch."""

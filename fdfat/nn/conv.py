@@ -12,9 +12,8 @@ def initialize_weights(model):
         if t is nn.Conv2d:
             pass  # nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
         elif t is nn.BatchNorm2d:
-            m.eps = 1e-3
+            m.eps = 1e-5
             m.momentum = 0.03
-            m.track_running_stats=False
         elif t in [nn.Hardswish, nn.LeakyReLU, nn.ReLU, nn.ReLU6, nn.SiLU]:
             m.inplace = True
 
@@ -30,14 +29,14 @@ class Conv(nn.Module):
     """Standard convolution with args(ch_in, ch_out, kernel, stride, padding, groups, dilation, activation)."""
     default_act = nn.SiLU()  # default activation
 
-    def __init__(self, c1, c2, k=1, s=1, p=None, g=1, d=1, act=True, track_running_stats=False):
+    def __init__(self, c1, c2, k=1, s=1, p=None, g=1, d=1, act=True):
         """Initialize Conv layer with given arguments including activation."""
         super().__init__()
         self.conv = nn.Conv2d(c1, c2, k, s, autopad(k, p, d), groups=g, dilation=d, bias=False)
-        self.bn = nn.BatchNorm2d(c2, track_running_stats=track_running_stats)
+        self.bn = nn.BatchNorm2d(c2)
         self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
 
-        initialize_weights(self)
+        # initialize_weights(self)
 
     def forward(self, x):
         """Apply convolution, batch normalization and activation to input tensor."""
@@ -50,8 +49,8 @@ class Conv(nn.Module):
 class DWConv(Conv):
     """Depth-wise convolution."""
 
-    def __init__(self, c1, c2, k=1, s=1, d=1, act=True, track_running_stats=False):  # ch_in, ch_out, kernel, stride, dilation, activation
-        super().__init__(c1, c2, k, s, g=math.gcd(c1, c2), d=d, act=act, track_running_stats=track_running_stats)
+    def __init__(self, c1, c2, k=1, s=1, d=1, act=True):  # ch_in, ch_out, kernel, stride, dilation, activation
+        super().__init__(c1, c2, k, s, g=math.gcd(c1, c2), d=d, act=act)
 
 class Concat(nn.Module):
     """Concatenate a list of tensors along dimension."""
@@ -70,7 +69,7 @@ class IdentifyBlock(nn.Module):
 
     default_act = nn.ReLU6()  # default activation
 
-    def __init__(self, in_ch, out_ch, expand, k=3, act=True, stride=1, dilation_rate=1, track_running_stats=False):
+    def __init__(self, in_ch, out_ch, expand, k=3, act=True, stride=1, dilation_rate=1):
         super().__init__()
 
         self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
@@ -78,20 +77,20 @@ class IdentifyBlock(nn.Module):
         expand_ch = int(expand*in_ch)
 
         # expansion
-        self.conv1 = Conv(in_ch, expand_ch, k=1, act=self.act, track_running_stats=track_running_stats)
+        self.conv1 = Conv(in_ch, expand_ch, k=1, act=self.act)
 
         # depthwise
-        self.conv2 = DWConv(expand_ch, expand_ch, k=k, s=stride, d=dilation_rate, act=self.act, track_running_stats=track_running_stats)
+        self.conv2 = DWConv(expand_ch, expand_ch, k=k, s=stride, d=dilation_rate, act=self.act)
 
         # squeeze
-        self.conv3 = Conv(expand_ch, out_ch, k=1, act=False, track_running_stats=track_running_stats)
+        self.conv3 = Conv(expand_ch, out_ch, k=1, act=False)
 
         self.need_fuse = in_ch == out_ch
         self.need_pool = stride == 2
         if self.need_fuse and self.need_pool:
             self.pool = nn.MaxPool2d(2, stride=2)
 
-        initialize_weights(self)
+        # initialize_weights(self)
 
     def forward(self, x):
         

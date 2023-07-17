@@ -5,19 +5,21 @@ from collections import defaultdict
 from fdfat.utils.utils import LMK_PARTS, LMK_PART_NAMES, render_batch
 from fdfat import TQDM_BAR_FORMAT
 from fdfat.metric.metric import nme
+from fdfat.utils.model_utils import normalize_tensor
 
 def val_loop(cfgs, current_epoch, dataloader, model, loss_fn, name="Valid"):
-    loss_dict = defaultdict(lambda: 0)
 
-    num_batches = len(dataloader)
-    pbar = tqdm.tqdm(enumerate(dataloader), total=num_batches, bar_format=TQDM_BAR_FORMAT)
-
-    model.eval()
     with torch.no_grad():
+        loss_dict = defaultdict(lambda: 0)
+
+        num_batches = len(dataloader)
+        pbar = tqdm.tqdm(enumerate(dataloader), total=num_batches, bar_format=TQDM_BAR_FORMAT)
+
+        model.eval()
         for batch, (x, y) in pbar:
             x_device = x.to(cfgs.device, non_blocking=True)
             if not cfgs.pre_norm:
-                x_device = ((x_device / 127.5) - 1).type(torch.float32)
+                x_device = normalize_tensor(x_device).type(torch.float32)
             y_device = y.to(cfgs.device, non_blocking=True)
 
             pred = model(x_device)
@@ -50,7 +52,7 @@ def val_loop(cfgs, current_epoch, dataloader, model, loss_fn, name="Valid"):
                 save_batch_png = cfgs.save_dir / f'{name}_batch{batch}.png'
                 render_batch(x_device.cpu().detach().numpy(), y_device[:,:70*2].cpu().detach().numpy(), save_batch_png)
 
-    for k in loss_dict.keys():
-        loss_dict[k] /= num_batches
+        for k in loss_dict.keys():
+            loss_dict[k] /= num_batches
 
-    return loss_dict
+        return loss_dict

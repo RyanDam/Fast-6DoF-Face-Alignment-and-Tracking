@@ -34,24 +34,24 @@ class BaseModel(nn.Module):
 
 class LightWeightModel(BaseModel):
 
-    def __init__(self, imgz=128, muliplier=1, pose_rotation=False, track_running_stats=False):
+    def __init__(self, imgz=128, muliplier=1, pose_rotation=False):
         super().__init__()
         self.pose_rotation = pose_rotation
 
         # backbone, output size = size/4
-        self.backbone = module.LightWeightBackbone(muliplier=muliplier, track_running_stats=track_running_stats)
+        self.backbone = module.LightWeightBackbone(muliplier=muliplier)
 
         # mainstream, output size:
         # x1 = size/8
         # x2 = size/16
         # x3 = size/16
-        self.mainstream = module.MainStreamModule(muliplier=muliplier, track_running_stats=track_running_stats)
+        self.mainstream = module.MainStreamModule(muliplier=muliplier)
 
         if pose_rotation:
-            self.aux = module.AuxiliaryBackbone(int(16*muliplier), 3, muliplier=muliplier, track_running_stats=track_running_stats)
+            self.aux = module.AuxiliaryBackbone(int(16*muliplier), 3, muliplier=muliplier)
             
         output_ch = int((128 + 128 + 128)*muliplier)
-        self.logit = module.FERegress(output_ch, 70*2, track_running_stats=track_running_stats)
+        self.logit = module.FERegress(output_ch, 70*2)
 
         self.concat = Concat()
 
@@ -75,48 +75,48 @@ class LightWeightModel(BaseModel):
 
 class LandmarkModel(BaseModel):
 
-    def __init__(self, imgz=128, muliplier=1, pose_rotation=False, track_running_stats=False):
+    def __init__(self, imgz=128, muliplier=1, pose_rotation=False):
         super().__init__()
         
         self.stack1 = nn.Sequential(
             nn.Conv2d( 3, int(32*muliplier), 3, stride=2, padding=2),
-            nn.BatchNorm2d(int(32*muliplier), track_running_stats=track_running_stats),
+            nn.BatchNorm2d(int(32*muliplier)),
             nn.ReLU(),
             nn.Conv2d(int(32*muliplier), int(32*muliplier), 3, padding=1),
-            nn.BatchNorm2d(int(32*muliplier), track_running_stats=track_running_stats),
+            nn.BatchNorm2d(int(32*muliplier)),
             nn.ReLU()
         )
 
         self.stack2 = nn.Sequential(
             nn.Conv2d(int(32*muliplier), int(64*muliplier), 3, stride=2, padding=2),
-            nn.BatchNorm2d(int(64*muliplier), track_running_stats=track_running_stats),
+            nn.BatchNorm2d(int(64*muliplier)),
             nn.ReLU(),
             nn.Conv2d(int(64*muliplier), int(64*muliplier), 3, padding=1),
-            nn.BatchNorm2d(int(64*muliplier), track_running_stats=track_running_stats),
+            nn.BatchNorm2d(int(64*muliplier)),
             nn.ReLU()
         )
 
         self.stack3 = nn.Sequential(
             nn.Conv2d(int(64*muliplier), int(128*muliplier), 3, stride=2, padding=2),
-            nn.BatchNorm2d(int(128*muliplier), track_running_stats=track_running_stats),
+            nn.BatchNorm2d(int(128*muliplier)),
             nn.ReLU(),
             nn.Conv2d(int(128*muliplier), int(128*muliplier), 3, padding=1),
-            nn.BatchNorm2d(int(128*muliplier), track_running_stats=track_running_stats),
+            nn.BatchNorm2d(int(128*muliplier)),
             nn.ReLU(),
             nn.Conv2d(int(128*muliplier), int(128*muliplier), 3, padding=1),
-            nn.BatchNorm2d(int(128*muliplier), track_running_stats=track_running_stats),
+            nn.BatchNorm2d(int(128*muliplier)),
             nn.ReLU()
         )
 
         self.stack4 = nn.Sequential(
             nn.Conv2d(int(128*muliplier), int(256*muliplier), 3, stride=2, padding=2),
-            nn.BatchNorm2d(int(256*muliplier), track_running_stats=track_running_stats),
+            nn.BatchNorm2d(int(256*muliplier)),
             nn.ReLU(),
             nn.Conv2d(int(256*muliplier), int(256*muliplier), 3, padding=1),
-            nn.BatchNorm2d(int(256*muliplier), track_running_stats=track_running_stats),
+            nn.BatchNorm2d(int(256*muliplier)),
             nn.ReLU(),
             nn.Conv2d(int(256*muliplier), int(256*muliplier), 3, padding=1),
-            nn.BatchNorm2d(int(256*muliplier), track_running_stats=track_running_stats),
+            nn.BatchNorm2d(int(256*muliplier)),
             nn.ReLU(),
             nn.AdaptiveAvgPool2d((1, 1)),
         )
