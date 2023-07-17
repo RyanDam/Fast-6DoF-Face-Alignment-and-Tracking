@@ -61,9 +61,9 @@ class BaseEngine:
         if verbose:
             _ = model_info(self.net, detailed=True, imgsz=self.cfgs.imgsz, device=self.cfgs.device)
 
-    def load_checkpoint(self, checkpoint):
+    def load_checkpoint(self, checkpoint, map_location='cpu'):
         if isinstance(checkpoint, str) or isinstance(checkpoint, Path):
-            checkpoint = torch.load(checkpoint)
+            checkpoint = torch.load(checkpoint, map_location=map_location)
         self.checkpoint = checkpoint
         self.net.load(checkpoint)
         self.start_epoch = checkpoint['epoch']
