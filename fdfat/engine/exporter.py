@@ -74,7 +74,7 @@ class ExportEngine(BaseEngine):
                 onnx2tf.convert(
                     input_onnx_file_path=onnx_saved_path,
                     output_folder_path=tf_saved_path,
-                    copy_onnx_input_output_names_to_tflite=True,
+                    not_use_onnxsim=True,
                     non_verbose=True
                 )
 

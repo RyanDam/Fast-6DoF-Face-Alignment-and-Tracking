@@ -33,6 +33,7 @@ def gen_bbox(lmk, scale=[1.4, 1.6], offset=0.2, square=True):
 def read_data(img_path, lmk_scale=1.0, aug=None, norm=True):
     img = Image.open(img_path)
     lmk_path = img_path.replace(".png", "_ldmks.txt")
+
     with open(lmk_path, 'r') as f:
         lmk = f.readlines()
         lmk = np.array([[float(n) for n in l.strip("\n").split(" ")] for l in lmk])
