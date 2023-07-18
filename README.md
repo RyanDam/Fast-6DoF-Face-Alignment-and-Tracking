@@ -62,6 +62,12 @@ fdfat --task val --data <path-to-your-dataset-yaml> --model LightWeightModel
 fdfat --task predict --model LightWeightModel --checkpoint <path-to-checkoint> --input <path-to-test-img>
 ```
 
+## Export
+
+```bash
+fdfat --task export --model LightWeightModel --checkpoint <path-to-checkoint> --export_format tflite
+```
+
 ## Credit
 
 - [YOLOv8](https://github.com/ultralytics/ultralytics) : Thanks for ultralytics awesome project, I borrow some code from here.
