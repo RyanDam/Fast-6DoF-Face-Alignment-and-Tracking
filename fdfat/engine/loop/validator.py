@@ -39,8 +39,8 @@ def val_loop(cfgs, current_epoch, dataloader, model, loss_fn, name="Valid"):
                 total_loss = loss.mean()
 
             loss_dict["total"] += total_loss.item()
-            nme_val = nme(pred[:,:68*2], y_device[:,:68*2]).mean().cpu().detach().numpy()
-            loss_dict["nme"] += nme_val
+            nme_val = nme(pred[:,:68*2], y_device[:,:68*2], reduced=False).cpu().detach().numpy()
+            loss_dict["nme"] += nme_val.mean()
             nme_list.append(nme_val)
 
             for (b, e), pname in zip(cfgs.lmk_parts, cfgs.lmk_part_names):
@@ -63,11 +63,24 @@ def val_loop(cfgs, current_epoch, dataloader, model, loss_fn, name="Valid"):
         for k in loss_dict.keys():
             loss_dict[k] /= num_batches
 
-        nme_list = np.array(nme_list)
-        loss_dict["nme_min"] = np.min(nme_list)
-        loss_dict["nme_max"] = np.max(nme_list)
-        loss_dict["nme_mean"] = np.mean(nme_list)
-        loss_dict["nme_median"] = np.median(nme_list)
-        loss_dict["nme_std"] = np.std(nme_list)
+        for k, v in loss_dict.items():
+            loss_dict[k] = float(v)
 
+        nme_list = np.concatenate(nme_list)
+
+        loss_dict["nme_stat"] ={
+            "nme_min": float(np.min(nme_list)),
+            "nme_max": float(np.max(nme_list)),
+            "nme_mean": float(np.mean(nme_list)),
+            "nme_median": float(np.median(nme_list)),
+            "nme_std": float(np.std(nme_list)),
+            "nme_part": {
+                "nme_min": np.min(nme_list, axis=0).tolist(),
+                "nme_max": np.max(nme_list, axis=0).tolist(),
+                "nme_mean": np.mean(nme_list, axis=0).tolist(),
+                "nme_median": np.median(nme_list, axis=0).tolist(),
+                "nme_std": np.std(nme_list, axis=0).tolist(),
+            }
+        }
+        
         return loss_dict

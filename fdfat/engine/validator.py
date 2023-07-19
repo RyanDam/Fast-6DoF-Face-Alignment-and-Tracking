@@ -13,9 +13,10 @@ from fdfat import __version__
 from fdfat.utils.logger import LOGGER
 from fdfat.engine.base import BaseEngine
 from fdfat.data.dataloader import LandmarkDataset
-from fdfat.utils.utils import LMK_PART_NAMES, read_file_list, render_lmk, generate_graph
+from fdfat.utils.utils import LMK_PART_NAMES, read_file_list, render_lmk, generate_graph, render_lmk_nme
 
 from fdfat.engine.loop.validator import val_loop
+
 
 class ValEngine(BaseEngine):
 
@@ -54,16 +55,15 @@ class ValEngine(BaseEngine):
         loss_dict = val_loop(self.cfgs, 0, self.dataloader, self.net, self.loss_fn)
         LOGGER.info(f"DONE in {int(time.time() - start_time)}s")
 
-        for k, v in loss_dict.items():
-            loss_dict[k] = float(v)
-
         if verbose:
             for k, v in loss_dict.items():
                 print(k, v, "\n")
 
         timenow = datetime.now().isoformat()
         fname = self.target_data_path.stem
-        validate_record_path = self.save_dir / f"validate_{self.cfgs.validation}_{fname}_{timenow}.json"
+        validate_name = f"validate_{self.cfgs.validation}_{fname}_{timenow}"
+        validate_record_path = self.save_dir / f"{validate_name}.json"
+        validate_lmk_nme_path = self.save_dir / f"{validate_name}.jpg"
 
         loss_dict["date"] = timenow
         loss_dict["datapath"] = str(self.target_data_path)
@@ -72,4 +72,7 @@ class ValEngine(BaseEngine):
         with open(validate_record_path, "w") as f:
             json.dump(loss_dict, f)
 
+        lmk_nme = render_lmk_nme(loss_dict["nme_stat"]["nme_part"]["nme_mean"], title=validate_name)
+        lmk_nme.save(validate_lmk_nme_path)
+        
         return loss_dict

@@ -8,6 +8,8 @@ from PIL import Image, ImageDraw
 import numpy as np
 import matplotlib.pyplot as plt
 
+from fdfat.utils.pose_estimation import MODEL_3D_POINTS
+
 LMK_PARTS = [
     [0, 17], # jaw
     [17, 22], # left eye brown
@@ -23,6 +25,39 @@ LMK_PARTS = [
 LMK_PART_NAMES = [
     "jaw", "leyeb", "reyeb", "nose", "nosetip", "leye", "reye", "mount", "purpils"
 ]
+
+def circle(cx, cy, R=2):
+    return cx - R//2, cy - R//2, cx + R//2, cy + R//2
+
+def render_lmk_nme(nme, imgsz=1024, base_radius=200, title=None):
+
+    # load model
+    model_points = np.array(MODEL_3D_POINTS, dtype=np.float32)
+    model_points = np.reshape(model_points, (3, -1)).T
+    model_points[:, 2] *= -1
+
+    # normalize
+    minx, miny, maxx, maxy = model_points[:,0].min(), model_points[:,1].min(), model_points[:,0].max(), model_points[:,1].max()
+    lmk_model = model_points[:,:2].copy()
+    lmk_model[:,0] = (lmk_model[:,0] - minx)/(maxx-minx)
+    lmk_model[:,1] = (lmk_model[:,1] - miny)/(maxy-miny)
+
+    target = Image.new('RGB', (imgsz, imgsz), color=(255, 255, 255))
+    draw = ImageDraw.Draw(target)
+
+    lmk_image = lmk_model * (imgsz - 144) + 72
+    for (x, y), v in zip(lmk_image, nme):
+        target_radius = 200*v
+        draw.ellipse(circle(x, y, R=target_radius), fill=(201, 168, 75))
+
+        textbox = draw.textbbox((x, y+target_radius//2 + 2), f"{v*100:3.2f}")
+        text_width = textbox[2]-textbox[0]
+        draw.text((x-text_width//2, y+target_radius//2 + 2), f"{v*100:3.2f}", fill=(0, 0, 0))
+
+    if title is not None:
+        draw.text((10, 10), title, fill=(0, 0, 0))
+
+    return target
 
 def render_lmk(img, lmk, point_size=2, render=False):
 
