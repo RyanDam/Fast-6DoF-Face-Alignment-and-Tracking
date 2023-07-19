@@ -31,8 +31,8 @@ def gen_bbox(lmk, scale=[1.4, 1.6], offset=0.2, square=True):
     return np.vstack([center-size/2, center+size/2])
 
 def read_data(img_path, lmk_scale=1.0, aug=None, norm=True):
-    img = Image.open(img_path)
-    lmk_path = img_path.replace(".png", "_ldmks.txt")
+    img = Image.open(img_path).convert("RGB")
+    lmk_path = img_path.replace(".png" if img_path.endswith(".png") else ".jpg", "_ldmks.txt")
 
     with open(lmk_path, 'r') as f:
         lmk = f.readlines()
@@ -118,6 +118,7 @@ class LandmarkDataset(Dataset):
             if np.abs(rot_vec_norm).max() > 1.5:
                 rot_weight = 0
             lmk_rot_norm = np.concatenate([lmk.flatten().astype(np.float32), rot_vec_norm.astype(np.float32), np.array([rot_weight], dtype=np.float32)])
+
             return img.transpose((2, 0, 1)), lmk_rot_norm.flatten()
         else:
             return img.transpose((2, 0, 1)), lmk.flatten()

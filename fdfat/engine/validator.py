@@ -1,9 +1,12 @@
 import time
+from datetime import datetime
+import json
 from pathlib import Path
 from typing import Dict, Union
 from types import SimpleNamespace
 
 import torch
+from torch import nn
 from torch.utils.data import DataLoader
 
 from fdfat import __version__
@@ -28,6 +31,7 @@ class ValEngine(BaseEngine):
             self.target_data_path = self.cfgs.data.train
         elif self.cfgs.validation == "test":
             self.target_data_path = self.cfgs.data.test
+        self.target_data_path = Path(self.target_data_path)
 
         LOGGER.info(f"Load {self.cfgs.validation} data")
 
@@ -42,9 +46,7 @@ class ValEngine(BaseEngine):
 
     def prepare(self):
         self.target_checkpoint_path = self.cfgs.checkpoint if self.cfgs.checkpoint is not None else self.save_best
-        checkpoint = torch.load(self.target_checkpoint_path)
-        self.load_checkpoint(checkpoint)
-
+        self.load_checkpoint(self.target_checkpoint_path)
         self.loss_fn = getattr(nn, self.cfgs.loss)(reduction='none')
 
     def do_validate(self, verbose=True):
@@ -52,7 +54,22 @@ class ValEngine(BaseEngine):
         loss_dict = val_loop(self.cfgs, 0, self.dataloader, self.net, self.loss_fn)
         LOGGER.info(f"DONE in {int(time.time() - start_time)}s")
 
+        for k, v in loss_dict.items():
+            loss_dict[k] = float(v)
+
         if verbose:
-            print(loss_dict)
+            for k, v in loss_dict.items():
+                print(k, v, "\n")
+
+        timenow = datetime.now().isoformat()
+        fname = self.target_data_path.stem
+        validate_record_path = self.save_dir / f"validate_{self.cfgs.validation}_{fname}_{timenow}.json"
+
+        loss_dict["date"] = timenow
+        loss_dict["datapath"] = str(self.target_data_path)
+        loss_dict["database"] = str(self.cfgs.data.base_path)
+
+        with open(validate_record_path, "w") as f:
+            json.dump(loss_dict, f)
 
         return loss_dict

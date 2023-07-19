@@ -8,7 +8,7 @@ from torch import nn
 from fdfat.nn import model
 from fdfat.utils.logger import LOGGER
 from fdfat.cfg import get_cfg, get_cfg_data, yaml_save, cfg2dict, yaml_print
-from fdfat.utils.utils import LMK_PART_NAMES, increment_path, generate_graph, read_file_list, render_lmk
+from fdfat.utils.utils import LMK_PARTS, LMK_PART_NAMES, increment_path, generate_graph, read_file_list, render_lmk
 from fdfat.utils.model_utils import init_seeds, select_device, model_info
 
 class BaseEngine:
@@ -48,6 +48,13 @@ class BaseEngine:
         self.start_epoch = 0
         self.best_epoch_loss = 999
         self.best_epoch_no = 0
+
+        if self.cfgs.lmk_num == 70:
+            self.cfgs.lmk_parts = LMK_PARTS
+            self.cfgs.lmk_part_names = LMK_PART_NAMES
+        else: # 68 points
+            self.cfgs.lmk_parts = LMK_PARTS[:-1]
+            self.cfgs.lmk_part_names = LMK_PART_NAMES[:-1]
 
     def load_database(self):
         raise NotImplementedError("Not implemented")

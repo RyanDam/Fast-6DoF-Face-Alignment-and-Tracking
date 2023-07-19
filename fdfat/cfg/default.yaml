@@ -12,6 +12,7 @@ aug: 0.5 # aug
 input: # input file path/url for prediction
 validation: val # validation target set in the data yaml, one of train, val, test
 pre_norm: True # normalize data in dataloader instead of normalizing right before feeding to model 
+lmk_num: 70 # number of landmark points, 70 for face synthetic, 68 for 300w
 
 # model
 model: LightWeightModel # modelname

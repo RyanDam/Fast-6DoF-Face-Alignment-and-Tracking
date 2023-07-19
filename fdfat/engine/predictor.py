@@ -11,7 +11,7 @@ from fdfat.engine.base import BaseEngine
 from fdfat.utils.model_utils import preprocess
 from fdfat.utils.utils import render_lmk
 
-class TestEngine(BaseEngine):
+class PredictEngine(BaseEngine):
 
     def __init__(self, cfg_: Union[str, Path, Dict, SimpleNamespace]):
         super().__init__(cfg_)

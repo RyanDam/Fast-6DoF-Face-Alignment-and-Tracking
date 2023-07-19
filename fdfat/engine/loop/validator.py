@@ -1,8 +1,9 @@
 import tqdm
 import torch
+import numpy as np
 from collections import defaultdict
 
-from fdfat.utils.utils import LMK_PARTS, LMK_PART_NAMES, render_batch
+from fdfat.utils.utils import render_batch
 from fdfat import TQDM_BAR_FORMAT
 from fdfat.metric.metric import nme
 from fdfat.utils.model_utils import normalize_tensor
@@ -11,6 +12,7 @@ def val_loop(cfgs, current_epoch, dataloader, model, loss_fn, name="Valid"):
 
     with torch.no_grad():
         loss_dict = defaultdict(lambda: 0)
+        nme_list = []
 
         num_batches = len(dataloader)
         pbar = tqdm.tqdm(enumerate(dataloader), total=num_batches, bar_format=TQDM_BAR_FORMAT)
@@ -25,25 +27,31 @@ def val_loop(cfgs, current_epoch, dataloader, model, loss_fn, name="Valid"):
             pred = model(x_device)
 
             if cfgs.aux_pose:
-                loss = loss_fn(pred, y_device[:,:-1])
-                pose_weight = y_device[:,-1:]
-                loss[:,-3:] *= cfgs.aux_pose_weight * pose_weight
-            else:
-                loss = loss_fn(pred, y_device)
+                main_loss = loss_fn(pred[:,:cfgs.lmk_num*2], y_device[:,:cfgs.lmk_num*2])
+                pose_loss = loss_fn(pred[:,-3:], y_device[:,-4:-1])
 
-            total_loss = loss.mean()
+                pose_weight = y_device[:,-1:]
+                pose_loss *= cfgs.aux_pose_weight * pose_weight
+
+                total_loss = main_loss.mean() + pose_loss.mean()
+            else:
+                loss = loss_fn(pred[:,:cfgs.lmk_num*2], y_device[:,:cfgs.lmk_num*2])
+                total_loss = loss.mean()
 
             loss_dict["total"] += total_loss.item()
-            loss_dict["nme"] += nme(pred[:,:68*2], y_device[:,:68*2]).mean()
-            for (b, e), pname in zip(LMK_PARTS, LMK_PART_NAMES):
-                loss_dict[pname] += loss[:, b*2:e*2].mean().item()
+            nme_val = nme(pred[:,:68*2], y_device[:,:68*2]).mean().cpu().detach().numpy()
+            loss_dict["nme"] += nme_val
+            nme_list.append(nme_val)
+
+            for (b, e), pname in zip(cfgs.lmk_parts, cfgs.lmk_part_names):
+                loss_dict[pname] += main_loss[:, b*2:e*2].mean().item()
 
             losses_str = f"Total: {loss_dict['total']/(batch+1):>7f}, nmei: {loss_dict['nme']/(batch+1):>7f}"
-            for n in LMK_PART_NAMES:
+            for n in cfgs.lmk_part_names:
                 losses_str = f"{losses_str}, {n}: {loss_dict[n]/(batch+1):>7f}"
 
             if cfgs.aux_pose:
-                loss_dict["pose"] += (loss[:,-3:] / cfgs.aux_pose_weight).mean().item()
+                loss_dict["pose"] += (pose_loss / cfgs.aux_pose_weight).mean().item()
                 losses_str = f"{losses_str}, pose: {loss_dict['pose']/(batch+1):>7f}"
 
             pbar.set_description(f"{name} epoch [{current_epoch+1:3d}/{cfgs.epoch:3d}] {losses_str}")
@@ -54,5 +62,12 @@ def val_loop(cfgs, current_epoch, dataloader, model, loss_fn, name="Valid"):
 
         for k in loss_dict.keys():
             loss_dict[k] /= num_batches
+
+        nme_list = np.array(nme_list)
+        loss_dict["nme_min"] = np.min(nme_list)
+        loss_dict["nme_max"] = np.max(nme_list)
+        loss_dict["nme_mean"] = np.mean(nme_list)
+        loss_dict["nme_median"] = np.median(nme_list)
+        loss_dict["nme_std"] = np.std(nme_list)
 
         return loss_dict
