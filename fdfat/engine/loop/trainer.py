@@ -13,7 +13,7 @@ def train_loop(cfgs, current_epoch, dataloader, model, loss_fn, optimizer, name=
     nme_list = []
 
     if cfgs.lossw_enabled:
-        loss_weight = torch.zeros((cfgs.batch_size, 70))
+        loss_weight = torch.zeros((cfgs.batch_size, cfgs.lmk_num*2))
         all_weights = [
                 cfgs.w_jaw, 
                 cfgs.w_leyeb, cfgs.w_reyeb, 
@@ -22,7 +22,7 @@ def train_loop(cfgs, current_epoch, dataloader, model, loss_fn, optimizer, name=
                 cfgs.w_mount, cfgs.w_purpil
             ]
         for idx, (b, e) in enumerate(cfgs.lmk_parts):
-            loss_weight[:, b:e] = all_weights[idx]
+            loss_weight[:, b*2:e*2] = all_weights[idx]
         loss_weight = loss_weight.to(cfgs.device)
 
     num_batches = len(dataloader)
@@ -42,7 +42,7 @@ def train_loop(cfgs, current_epoch, dataloader, model, loss_fn, optimizer, name=
             pose_loss = loss_fn(pred[:,-3:], y_device[:,-4:-1])
 
             if cfgs.lossw_enabled:
-                main_loss[:, :cfgs.lmk_num*2] *= loss_weight[:loss.shape[0], :cfgs.lmk_num*2]
+                main_loss[:, :cfgs.lmk_num*2] *= loss_weight[:main_loss.shape[0], :cfgs.lmk_num*2]
 
             pose_weight = y_device[:,-1:]
             pose_loss *= cfgs.aux_pose_weight * pose_weight
