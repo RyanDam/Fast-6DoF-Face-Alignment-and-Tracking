@@ -33,10 +33,10 @@ def val_loop(cfgs, current_epoch, dataloader, model, loss_fn, name="Valid"):
                 pose_weight = y_device[:,-1:]
                 pose_loss *= cfgs.aux_pose_weight * pose_weight
 
-                total_loss = main_loss.mean() + pose_loss.mean()
+                total_loss = (main_loss.mean() + pose_loss.mean())/2
             else:
-                loss = loss_fn(pred[:,:cfgs.lmk_num*2], y_device[:,:cfgs.lmk_num*2])
-                total_loss = loss.mean()
+                main_loss = loss_fn(pred[:,:cfgs.lmk_num*2], y_device[:,:cfgs.lmk_num*2])
+                total_loss = main_loss.mean()
 
             loss_dict["total"] += total_loss.item()
             nme_val = nme(pred[:,:68*2], y_device[:,:68*2], reduced=False).cpu().detach().numpy()

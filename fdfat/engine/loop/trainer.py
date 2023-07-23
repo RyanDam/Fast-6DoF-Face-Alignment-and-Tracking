@@ -6,6 +6,7 @@ from collections import defaultdict
 from fdfat.utils.utils import render_batch
 from fdfat import TQDM_BAR_FORMAT
 from fdfat.metric.metric import nme
+from fdfat.data.dataloader import LMK_POINT_MEANS
 from fdfat.utils.model_utils import normalize_tensor
 
 def train_loop(cfgs, current_epoch, dataloader, model, loss_fn, optimizer, name="Train"):
@@ -24,6 +25,9 @@ def train_loop(cfgs, current_epoch, dataloader, model, loss_fn, optimizer, name=
         for idx, (b, e) in enumerate(cfgs.lmk_parts):
             loss_weight[:, b*2:e*2] = all_weights[idx]
         loss_weight = loss_weight.to(cfgs.device)
+
+    # if cfgs.lmk_mean:
+    #     lmk_means = torch.from_numpy(LMK_POINT_MEANS)
 
     num_batches = len(dataloader)
     pbar = tqdm.tqdm(enumerate(dataloader), total=num_batches, bar_format=TQDM_BAR_FORMAT)
@@ -47,11 +51,11 @@ def train_loop(cfgs, current_epoch, dataloader, model, loss_fn, optimizer, name=
             pose_weight = y_device[:,-1:]
             pose_loss *= cfgs.aux_pose_weight * pose_weight
 
-            total_loss = main_loss.mean() + pose_loss.mean()
+            total_loss = (main_loss.mean() + pose_loss.mean())/2
 
         else:
-            loss = loss_fn(pred[:,:cfgs.lmk_num*2], y_device[:,:cfgs.lmk_num*2])
-            total_loss = loss.mean()
+            main_loss = loss_fn(pred[:,:cfgs.lmk_num*2], y_device[:,:cfgs.lmk_num*2])
+            total_loss = main_loss.mean()
 
         # Backpropagation
         total_loss.backward()
@@ -59,6 +63,9 @@ def train_loop(cfgs, current_epoch, dataloader, model, loss_fn, optimizer, name=
         optimizer.zero_grad()
 
         loss_dict["total"] += total_loss.item()
+        # if cfgs.lmk_mean:
+        #     nme_val = nme(pred[:,:68*2], y_device[:,:68*2]).mean().cpu().detach().numpy()
+        # else:
         nme_val = nme(pred[:,:68*2], y_device[:,:68*2]).mean().cpu().detach().numpy()
         loss_dict["nme"] += nme_val
         nme_list.append(nme_val)

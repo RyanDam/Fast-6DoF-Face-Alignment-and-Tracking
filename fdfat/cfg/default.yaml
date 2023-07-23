@@ -20,6 +20,7 @@ imgsz: 128 # size of input image as integer
 aux_pose: True # model with auxiliary pose esimation
 muliplier: 1.0 # model depth multiplier
 checkpoint: # target checkpoint to load
+lmk_mean: False # use landmark mean
 
 # training
 resume: False # resume training
