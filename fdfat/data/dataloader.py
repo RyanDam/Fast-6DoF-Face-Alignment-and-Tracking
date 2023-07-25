@@ -202,6 +202,7 @@ class LandmarkDataset(Dataset):
         if aug:
             self.aug = A.Compose([
                 # A.HorizontalFlip(p=0.5), # wrong lmk idx
+                A.Affine(scale=(0.9,1.1), translate_percent=0.1),
                 A.ToGray(p=0.2),
                 A.Rotate (limit=10, p=0.2),
                 A.RandomBrightnessContrast(p=0.2),
