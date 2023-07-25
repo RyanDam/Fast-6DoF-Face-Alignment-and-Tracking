@@ -20,9 +20,9 @@ def val_loop(cfgs, current_epoch, dataloader, model, loss_fn, name="Valid"):
         model.eval()
         for batch, (x, y) in pbar:
             x_device = x.to(cfgs.device, non_blocking=True)
+            y_device = y.to(cfgs.device, non_blocking=True)
             if not cfgs.pre_norm:
                 x_device = normalize_tensor(x_device).type(torch.float32)
-            y_device = y.to(cfgs.device, non_blocking=True)
 
             pred = model(x_device)
 

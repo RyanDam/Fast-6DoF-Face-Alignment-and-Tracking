@@ -4,6 +4,7 @@ name: Landmark # name of experiment
 project: # path to project folder
 seed: 0  # random seed for reproducibility
 override: False # overide project if any, otherwise it will created a new project
+profiler: False # show profiler while training
 
 # data
 data: # path to dataset file, ie. face_synth.yaml

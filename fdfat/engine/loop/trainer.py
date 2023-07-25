@@ -4,6 +4,7 @@ import numpy as np
 from collections import defaultdict
 
 from fdfat.utils.utils import render_batch
+from fdfat.utils.profiler import Profile
 from fdfat import TQDM_BAR_FORMAT
 from fdfat.metric.metric import nme
 from fdfat.data.dataloader import LMK_POINT_MEANS
@@ -12,6 +13,14 @@ from fdfat.utils.model_utils import normalize_tensor
 def train_loop(cfgs, current_epoch, dataloader, model, loss_fn, optimizer, name="Train"):
     loss_dict = defaultdict(lambda: 0)
     nme_list = []
+
+    bench_move_data = Profile("MOVE_DATA")
+    bench_forward   = Profile("FORWARD")
+    bench_loss      = Profile("LOSS")
+    bench_backward  = Profile("BACKWARD")
+    bench_opstep    = Profile("OPSTEP")
+    bench_stats     = Profile("STATS")
+    all_bench = [bench_move_data, bench_forward, bench_loss, bench_backward, bench_opstep, bench_stats]
 
     if cfgs.lossw_enabled:
         loss_weight = torch.zeros((cfgs.batch_size, cfgs.lmk_num*2))
@@ -34,55 +43,67 @@ def train_loop(cfgs, current_epoch, dataloader, model, loss_fn, optimizer, name=
 
     model.train()
     for batch, (x, y) in pbar:
-        x_device = x.to(cfgs.device, non_blocking=True)
-        if not cfgs.pre_norm:
-            x_device = normalize_tensor(x_device).type(torch.float32)
-        y_device = y.to(cfgs.device, non_blocking=True)
+        with bench_move_data:
+            x_device = x.to(cfgs.device, non_blocking=True)
+            y_device = y.to(cfgs.device, non_blocking=True)
 
-        pred = model(x_device)
+            if not cfgs.pre_norm:
+                x_device = normalize_tensor(x_device).type(torch.float32)
 
-        if cfgs.aux_pose:
-            main_loss = loss_fn(pred[:,:cfgs.lmk_num*2], y_device[:,:cfgs.lmk_num*2])
-            pose_loss = loss_fn(pred[:,-3:], y_device[:,-4:-1])
+        with bench_forward:
+            pred = model(x_device)
 
-            if cfgs.lossw_enabled:
-                main_loss[:, :cfgs.lmk_num*2] *= loss_weight[:main_loss.shape[0], :cfgs.lmk_num*2]
+        with bench_loss:
+            if cfgs.aux_pose:
+                main_loss = loss_fn(pred[:,:cfgs.lmk_num*2], y_device[:,:cfgs.lmk_num*2])
+                pose_loss = loss_fn(pred[:,-3:], y_device[:,-4:-1])
 
-            pose_weight = y_device[:,-1:]
-            pose_loss *= cfgs.aux_pose_weight * pose_weight
+                if cfgs.lossw_enabled:
+                    main_loss[:, :cfgs.lmk_num*2] *= loss_weight[:main_loss.shape[0], :cfgs.lmk_num*2]
 
-            total_loss = (main_loss.mean() + pose_loss.mean())/2
+                pose_weight = y_device[:,-1:]
+                pose_loss *= cfgs.aux_pose_weight * pose_weight
 
-        else:
-            main_loss = loss_fn(pred[:,:cfgs.lmk_num*2], y_device[:,:cfgs.lmk_num*2])
-            total_loss = main_loss.mean()
+                total_loss = (main_loss.mean() + pose_loss.mean())/2
+
+            else:
+                main_loss = loss_fn(pred[:,:cfgs.lmk_num*2], y_device[:,:cfgs.lmk_num*2])
+                total_loss = main_loss.mean()
 
         # Backpropagation
-        total_loss.backward()
-        optimizer.step()
-        optimizer.zero_grad()
+        with bench_backward:
+            total_loss.backward()
 
-        loss_dict["total"] += total_loss.item()
-        # if cfgs.lmk_mean:
-        #     nme_val = nme(pred[:,:68*2], y_device[:,:68*2]).mean().cpu().detach().numpy()
-        # else:
-        nme_val = nme(pred[:,:68*2], y_device[:,:68*2]).mean().cpu().detach().numpy()
-        loss_dict["nme"] += nme_val
-        nme_list.append(nme_val)
+        with bench_opstep:
+            optimizer.step()
+            optimizer.zero_grad()
 
-        for (b, e), pname in zip(cfgs.lmk_parts, cfgs.lmk_part_names):
-            loss_dict[pname] += main_loss[:, b*2:e*2].mean().item()
+        with bench_stats:
+            loss_dict["total"] += total_loss.item()
+            # if cfgs.lmk_mean:
+            #     nme_val = nme(pred[:,:68*2], y_device[:,:68*2]).mean().cpu().detach().numpy()
+            # else:
+            nme_val = nme(pred[:,:68*2], y_device[:,:68*2]).mean()#.cpu().detach().numpy()
+            loss_dict["nme"] += nme_val
+            nme_list.append(nme_val)
 
-        losses_str = f"Total: {loss_dict['total']/(batch+1):>7f}, nmei: {loss_dict['nme']/(batch+1):>7f}"
-        for n in cfgs.lmk_part_names:
-            losses_str = f"{losses_str}, {n}: {loss_dict[n]/(batch+1):>7f}"
+            for (b, e), pname in zip(cfgs.lmk_parts, cfgs.lmk_part_names):
+                loss_dict[pname] += main_loss[:, b*2:e*2].mean().item()
 
-        if cfgs.aux_pose:
-            loss_dict["pose"] += (pose_loss / cfgs.aux_pose_weight).mean().item()
-            losses_str = f"{losses_str}, pose: {loss_dict['pose']/(batch+1):>7f}"
+            losses_str = f"Total: {loss_dict['total']/(batch+1):>7f}, nmei: {loss_dict['nme']/(batch+1):>7f}"
+            for n in cfgs.lmk_part_names:
+                losses_str = f"{losses_str}, {n}: {loss_dict[n]/(batch+1):>7f}"
+
+            if cfgs.aux_pose:
+                loss_dict["pose"] += (pose_loss / cfgs.aux_pose_weight).mean().item()
+                losses_str = f"{losses_str} pose: {loss_dict['pose']/(batch+1):>7f}"
+
+        if cfgs.profiler:
+            for b in all_bench:
+                losses_str = f"{losses_str} {b.name}: {int(b.report())}"
 
         pbar.set_description(f"{name} epoch [{current_epoch+1:3d}/{cfgs.epoch:3d}] {losses_str}")
-        
+
         if current_epoch == 0 and batch < cfgs.dump_batch:
             save_batch_png = cfgs.save_dir / f'{name}_batch{batch}.png'
             render_batch(x_device.cpu().detach().numpy(), y_device[:,:70*2].cpu().detach().numpy(), save_batch_png)
