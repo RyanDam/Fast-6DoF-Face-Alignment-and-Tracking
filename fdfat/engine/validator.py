@@ -9,7 +9,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-from fdfat import __version__
+from fdfat import __version__, MACOS, LINUX, WINDOWS
 from fdfat.utils.logger import LOGGER
 from fdfat.engine.base import BaseEngine
 from fdfat.data.dataloader import LandmarkDataset
@@ -45,7 +45,7 @@ class ValEngine(BaseEngine):
                                         pin_memory=self.cfgs.pin_memory,
                                         num_workers=self.cfgs.workers,
                                         persistent_workers=True,
-                                        multiprocessing_context="spawn")
+                                        multiprocessing_context="spawn" if MACOS else None)
         
         LOGGER.info("Load database DONE")
 

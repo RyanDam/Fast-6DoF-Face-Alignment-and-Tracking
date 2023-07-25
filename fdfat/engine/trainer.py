@@ -10,7 +10,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ConstantLR, SequentialLR, LinearLR, ReduceLROnPlateau
 
-from fdfat import __version__
+from fdfat import __version__, MACOS, LINUX, WINDOWS
 from fdfat.utils.logger import LOGGER
 from fdfat.engine.base import BaseEngine
 from fdfat.data.dataloader import LandmarkDataset
@@ -33,8 +33,7 @@ class TrainEngine(BaseEngine):
                                         pin_memory=self.cfgs.pin_memory,
                                         num_workers=self.cfgs.workers,
                                         persistent_workers=True,
-                                        # multiprocessing_context="spawn"
-                                        )
+                                        multiprocessing_context="spawn" if MACOS else None)
 
         LOGGER.info("Load Val data")
         self.dataset_test = LandmarkDataset(self.cfgs, read_file_list(self.cfgs.data.val, base_path=self.cfgs.data.base_path), cache_path=self.cfgs.data.val_cache, aug=False)
@@ -42,8 +41,7 @@ class TrainEngine(BaseEngine):
                                         pin_memory=self.cfgs.pin_memory,
                                         num_workers=self.cfgs.workers,
                                         persistent_workers=True,
-                                        # multiprocessing_context="spawn"
-                                        )
+                                        multiprocessing_context="spawn" if MACOS else None)
 
         LOGGER.info("Load database DONE")
 
