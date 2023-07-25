@@ -1,15 +1,20 @@
 
+
+import tqdm
+import pickle
 import numpy as np
 from PIL import Image
+from pathlib import Path
 
+import cv2
 import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 import albumentations as A
-import cv2
 
 from fdfat.utils.pose_estimation import PoseEstimator
 from fdfat.utils.model_utils import normalize_tensor
+from fdfat.utils.logger import LOGGER
 
 POSE_ROTAION_MED = np.array([-0.02234655,  0.28259986, -2.98499613])
 POSE_ROTATION_STD = np.array([0.87680358, 0.53386852, 0.25789746])
@@ -170,9 +175,7 @@ def gen_bbox(lmk, scale=[1.4, 1.6], offset=0.2, square=True):
 
     return np.vstack([center-size/2, center+size/2])
 
-def read_data(img_path, lmk_scale=1.0, aug=None, norm=True):
-    img = Image.open(img_path).convert("RGB")
-    lmk_path = img_path.replace(".png" if img_path.endswith(".png") else ".jpg", "_ldmks.txt")
+def read_raw_lmk(lmk_path):
 
     with open(lmk_path, 'r') as f:
         lmk = f.readlines()
@@ -180,38 +183,54 @@ def read_data(img_path, lmk_scale=1.0, aug=None, norm=True):
 
     bbox = gen_bbox(lmk)
 
-    croped = np.array(img.crop(bbox.astype(np.int32).flatten().tolist()))
-    lmk[:, 0] -= bbox[0, 0]
-    lmk[:, 1] -= bbox[0, 1]
+    return bbox, lmk
 
-    if aug is not None:
-        transformed = aug(image=croped, keypoints=lmk)
-        croped = transformed['image']
-        lmk = transformed['keypoints']
-        lmk = np.array(lmk)
+# def read_data(img_path, lmk_scale=1.0, aug=None, norm=True):
+#     img = Image.open(img_path).convert("RGB")
+#     lmk_path = img_path.replace(".png" if img_path.endswith(".png") else ".jpg", "_ldmks.txt")
 
-    # normalize
-    lmk /= croped.shape[1]
-    lmk -= 0.5
-    lmk *= lmk_scale
-    lmk = lmk.astype(np.float32)
+#     with open(lmk_path, 'r') as f:
+#         lmk = f.readlines()
+#         lmk = np.array([[float(n) for n in l.strip("\n").split(" ")] for l in lmk])
 
-    if norm:
-        croped = normalize_tensor(croped)
-        croped = croped.astype(np.float32)
-    else:
-        croped.astype(np.uint8)
+#     bbox = gen_bbox(lmk)
 
-    return croped, lmk
+#     croped = np.array(img.crop(bbox.astype(np.int32).flatten().tolist()))
+#     lmk[:, 0] -= bbox[0, 0]
+#     lmk[:, 1] -= bbox[0, 1]
+
+#     if aug is not None:
+#         transformed = aug(image=croped, keypoints=lmk)
+#         croped = transformed['image']
+#         lmk = transformed['keypoints']
+#         lmk = np.array(lmk)
+
+#     # normalize
+#     lmk /= croped.shape[1]
+#     lmk -= 0.5
+#     lmk *= lmk_scale
+#     lmk = lmk.astype(np.float32)
+
+#     if norm:
+#         croped = normalize_tensor(croped)
+#         croped = croped.astype(np.float32)
+#     else:
+#         croped.astype(np.uint8)
+
+#     return croped, lmk
 
 class LandmarkDataset(Dataset):
-    def __init__(self, cfgs, annotations_files, aug=True, pose_rotation=False):
+
+    def __init__(self, cfgs, annotations_files, aug=True, pose_rotation=False, cache_path=None):
         self.lmk_num = cfgs.lmk_num
         self.lmk_mean = cfgs.lmk_mean
         self.norm = cfgs.pre_norm
         self.img_paths = annotations_files
         self.imgsz = cfgs.imgsz
         self.pose_rotation = cfgs.aux_pose
+        
+        self.cache_path = cache_path
+        self.cache = self.read_cache()
 
         if aug:
             self.aug = A.Compose([
@@ -240,16 +259,25 @@ class LandmarkDataset(Dataset):
         
         self.trans = transforms.ToTensor()
 
-        print(f"Loaded {len(annotations_files)} samples")
+        LOGGER.info(f"Loaded {len(annotations_files)} samples")
 
     def __len__(self):
-        return len(self.img_paths)
+        if self.cache is None:
+            return len(self.img_paths)
+        else:
+            return len(self.cache)
 
     def __getitem__(self, idx):
-        img_path = self.img_paths[idx]
+        if self.cache is None:
+            img_path = self.img_paths[idx]
+            lmk_path = img_path.replace(".png" if img_path.endswith(".png") else ".jpg", "_ldmks.txt")
+            bbox, lmk = read_raw_lmk(lmk_path)
+            img = Image.open(img_path).convert("RGB")
+        else:
+            img_path, bbox, lmk = self.cache[idx]
+            img = Image.open(img_path).convert("RGB")
 
-        img, lmk = read_data(img_path, aug=self.aug, norm=self.norm)
-        
+        img, lmk = self.preprocess_raw(img, bbox, lmk)
         img = img.transpose((2, 0, 1))
 
         if self.pose_rotation:
@@ -269,3 +297,66 @@ class LandmarkDataset(Dataset):
             lmk[:self.lmk_num] -= LMK_POINT_MEANS[:self.lmk_num]
 
         return img, lmk
+
+    def preprocess_raw(self, img, bbox, lmk, lmk_scale=1.0):
+        croped = np.array(img.crop(bbox.astype(np.int32).flatten().tolist()))
+        lmk[:, 0] -= bbox[0, 0]
+        lmk[:, 1] -= bbox[0, 1]
+
+        if self.aug is not None:
+            transformed = self.aug(image=croped, keypoints=lmk)
+            croped = transformed['image']
+            lmk = transformed['keypoints']
+            lmk = np.array(lmk)
+
+        # normalize
+        lmk /= croped.shape[1]
+        lmk -= 0.5
+        lmk *= lmk_scale
+        lmk = lmk.astype(np.float32)
+
+        if self.norm:
+            croped = normalize_tensor(croped)
+            croped = croped.astype(np.float32)
+        else:
+            croped.astype(np.uint8)
+
+        return croped, lmk
+
+    def build_cache(self):
+        LOGGER.info(f"Building cache")
+        
+        cache = []
+        for img_path in tqdm.tqdm(self.img_paths):
+            lmk_path = img_path.replace(".png" if img_path.endswith(".png") else ".jpg", "_ldmks.txt")
+            try:
+                bbox, lmk = read_raw_lmk(lmk_path)
+                cache.append((img_path, bbox, lmk))
+            except Exception as e:
+                LOGGER.info(f"Read data error: {lmk_path}:\n{e}")
+                
+        LOGGER.info(f"Cache loaded: {len(cache)}/{len(self.img_paths)}")
+        
+        with open(self.cache_path, 'wb') as f:
+            pickle.dump(cache, f)
+        LOGGER.info(f"Cache saved: {self.cache_path}")
+
+        return cache
+
+    def read_cache(self):
+        if self.cache_path is None:
+            return None
+
+        self.cache_path = Path(self.cache_path)
+        if self.cache_path.exists():
+            with open(self.cache_path, 'rb') as f:
+                cache = pickle.load(f)
+            if len(cache) == len(self.img_paths):
+                LOGGER.info(f"Loaded cache ({len(cache)} samples) at {self.cache_path}")
+                return cache
+            else:
+                LOGGER.info(f"Loaded cache ({len(cache)} samples) mismatch with data ({len(self.img_paths)} samples) at {self.cache_path}")
+
+        cache = self.build_cache()
+
+        return cache

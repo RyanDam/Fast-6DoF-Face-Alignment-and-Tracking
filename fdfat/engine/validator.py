@@ -28,15 +28,19 @@ class ValEngine(BaseEngine):
     def load_database(self):
 
         self.target_data_path = self.cfgs.data.val
+        self.target_cache_path = self.cfgs.data.val_cache
         if self.cfgs.validation == "train":
             self.target_data_path = self.cfgs.data.train
+            self.target_cache_path = self.cfgs.data.train_cache
         elif self.cfgs.validation == "test":
             self.target_data_path = self.cfgs.data.test
+            self.target_cache_path = self.cfgs.data.test_cache
         self.target_data_path = Path(self.target_data_path)
+        self.target_cache_path = Path(self.target_cache_path) if self.target_cache_path is not None else None
 
         LOGGER.info(f"Load {self.cfgs.validation} data")
 
-        self.dataset = LandmarkDataset(self.cfgs, read_file_list(self.target_data_path, base_path=self.cfgs.data.base_path), aug=False)
+        self.dataset = LandmarkDataset(self.cfgs, read_file_list(self.target_data_path, base_path=self.cfgs.data.base_path), cache_path=self.target_cache_path, aug=False)
         self.dataloader = DataLoader(self.dataset, batch_size=self.cfgs.batch_size, shuffle=False,
                                         pin_memory=self.cfgs.pin_memory,
                                         num_workers=self.cfgs.workers,

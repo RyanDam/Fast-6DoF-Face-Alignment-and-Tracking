@@ -40,6 +40,14 @@ class BaseEngine:
         self.cfgs.save_dir = self.save_dir
         if self.cfgs.data is not None:
             self.cfgs.data = get_cfg_data(self.cfgs.data)
+            if self.cfgs.cache:
+                self.cfgs.data.train_cache = self.cfgs.data.train.replace(".txt", ".cache")
+                self.cfgs.data.val_cache = self.cfgs.data.val.replace(".txt", ".cache")
+                self.cfgs.data.test_cache = self.cfgs.data.test.replace(".txt", ".cache")
+            else:
+                self.cfgs.data.train_cache = None
+                self.cfgs.data.val_cache = None
+                self.cfgs.data.test_cache = None
 
         self.cfgs.device = select_device(self.cfgs.device)
 
@@ -52,7 +60,7 @@ class BaseEngine:
         if self.cfgs.lmk_num == 70:
             self.cfgs.lmk_parts = LMK_PARTS
             self.cfgs.lmk_part_names = LMK_PART_NAMES
-        else: # 68 points
+        else: # 68 points, no purpil
             self.cfgs.lmk_parts = LMK_PARTS[:-1]
             self.cfgs.lmk_part_names = LMK_PART_NAMES[:-1]
 
