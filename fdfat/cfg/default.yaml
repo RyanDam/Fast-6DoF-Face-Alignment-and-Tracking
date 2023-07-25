@@ -36,7 +36,7 @@ batch_size: 64 # batchsize
 lr0_factor: 0.01  # initial learning rate factor
 lre_factor: 0.1 # end_lr = current_lr*lr_factor at the end of the trainning
 device: cpu # target device, ie. cuda device=0 or device=0,1,2,3 or device=cpu
-dump_batch: 5 # write sample batch for debug
+dump_batch: 1 # write sample batch for debug
 save: True # save checkpoint and stats
 pin_memory: False # use pin memory for dataloader
 aux_pose_weight: 0.5 # loss weight for auxiliary pose esimation

@@ -18,7 +18,6 @@ def nme(pred, gt, left_index=[36], right_index=[45], reduced=True):
         gt_axis = gt
 
     eye_span = torch.linalg.norm(gt_axis[:, left_index, :] - gt_axis[:, right_index, :], dim=(1,2))
-
     error = torch.linalg.norm(pred_axis - gt_axis, dim=(2))/eye_span.view(eye_span.shape[0], 1)
 
     if reduced:

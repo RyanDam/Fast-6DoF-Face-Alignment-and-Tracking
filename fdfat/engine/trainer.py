@@ -33,7 +33,8 @@ class TrainEngine(BaseEngine):
                                         pin_memory=self.cfgs.pin_memory,
                                         num_workers=self.cfgs.workers,
                                         persistent_workers=True,
-                                        multiprocessing_context="spawn")
+                                        # multiprocessing_context="spawn"
+                                        )
 
         LOGGER.info("Load Val data")
         self.dataset_test = LandmarkDataset(self.cfgs, read_file_list(self.cfgs.data.val, base_path=self.cfgs.data.base_path), cache_path=self.cfgs.data.val_cache, aug=False)
@@ -41,7 +42,8 @@ class TrainEngine(BaseEngine):
                                         pin_memory=self.cfgs.pin_memory,
                                         num_workers=self.cfgs.workers,
                                         persistent_workers=True,
-                                        multiprocessing_context="spawn")
+                                        # multiprocessing_context="spawn"
+                                        )
 
         LOGGER.info("Load database DONE")
 
