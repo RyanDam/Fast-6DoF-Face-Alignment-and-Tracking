@@ -104,11 +104,16 @@ class IdentifyBlock(nn.Module):
 class Bottleneck(nn.Module):
     """Standard bottleneck."""
 
-    def __init__(self, c1, c2, shortcut=True, g=1, k=(3, 3), e=0.5):  # ch_in, ch_out, shortcut, groups, kernels, expand
+    default_act = nn.ReLU6()  # default activation
+
+    def __init__(self, c1, c2, shortcut=True, g=1, k=(3, 3), e=0.5, act=True):  # ch_in, ch_out, shortcut, groups, kernels, expand
         super().__init__()
+
+        self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
+
         c_ = int(c2 * e)  # hidden channels
-        self.cv1 = Conv(c1, c_, k[0], 1)
-        self.cv2 = Conv(c_, c2, k[1], 1, g=g)
+        self.cv1 = Conv(c1, c_, k[0], 1, act=self.act)
+        self.cv2 = Conv(c_, c2, k[1], 1, g=g, act=self.act)
         self.add = shortcut and c1 == c2
 
     def forward(self, x):
@@ -118,12 +123,17 @@ class Bottleneck(nn.Module):
 class C2f(nn.Module):
     """CSP Bottleneck with 2 convolutions."""
 
-    def __init__(self, c1, c2, n=1, shortcut=False, g=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
+    default_act = nn.ReLU6()  # default activation
+
+    def __init__(self, c1, c2, n=1, shortcut=False, g=1, e=0.5, act=True):  # ch_in, ch_out, number, shortcut, groups, expansion
         super().__init__()
+
+        self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
+
         self.c = int(c2 * e)  # hidden channels
-        self.cv1 = Conv(c1, 2 * self.c, 1, 1)
-        self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
-        self.m = nn.ModuleList(Bottleneck(self.c, self.c, shortcut, g, k=((3, 3), (3, 3)), e=1.0) for _ in range(n))
+        self.cv1 = Conv(c1, 2 * self.c, 1, 1, act=self.act)
+        self.cv2 = Conv((2 + n) * self.c, c2, 1, act=self.act)  # optional act=FReLU(c2)
+        self.m = nn.ModuleList(Bottleneck(self.c, self.c, shortcut, g, k=((3, 3), (3, 3)), e=1.0, act=self.act) for _ in range(n))
 
     def forward(self, x):
         """Forward pass through C2f layer."""
