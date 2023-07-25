@@ -42,7 +42,6 @@ class TrainEngine(BaseEngine):
                                         num_workers=self.cfgs.workers,
                                         persistent_workers=True,
                                         multiprocessing_context="spawn")
-        
 
         LOGGER.info("Load database DONE")
 

@@ -5,6 +5,7 @@ import pickle
 import numpy as np
 from PIL import Image
 from pathlib import Path
+from copy import deepcopy
 
 import cv2
 import torch
@@ -185,40 +186,6 @@ def read_raw_lmk(lmk_path):
 
     return bbox, lmk
 
-# def read_data(img_path, lmk_scale=1.0, aug=None, norm=True):
-#     img = Image.open(img_path).convert("RGB")
-#     lmk_path = img_path.replace(".png" if img_path.endswith(".png") else ".jpg", "_ldmks.txt")
-
-#     with open(lmk_path, 'r') as f:
-#         lmk = f.readlines()
-#         lmk = np.array([[float(n) for n in l.strip("\n").split(" ")] for l in lmk])
-
-#     bbox = gen_bbox(lmk)
-
-#     croped = np.array(img.crop(bbox.astype(np.int32).flatten().tolist()))
-#     lmk[:, 0] -= bbox[0, 0]
-#     lmk[:, 1] -= bbox[0, 1]
-
-#     if aug is not None:
-#         transformed = aug(image=croped, keypoints=lmk)
-#         croped = transformed['image']
-#         lmk = transformed['keypoints']
-#         lmk = np.array(lmk)
-
-#     # normalize
-#     lmk /= croped.shape[1]
-#     lmk -= 0.5
-#     lmk *= lmk_scale
-#     lmk = lmk.astype(np.float32)
-
-#     if norm:
-#         croped = normalize_tensor(croped)
-#         croped = croped.astype(np.float32)
-#     else:
-#         croped.astype(np.uint8)
-
-#     return croped, lmk
-
 class LandmarkDataset(Dataset):
 
     def __init__(self, cfgs, annotations_files, aug=True, pose_rotation=False, cache_path=None):
@@ -274,7 +241,7 @@ class LandmarkDataset(Dataset):
             bbox, lmk = read_raw_lmk(lmk_path)
             img = Image.open(img_path).convert("RGB")
         else:
-            img_path, bbox, lmk = self.cache[idx]
+            img_path, bbox, lmk = deepcopy(self.cache[idx])
             img = Image.open(img_path).convert("RGB")
 
         img, lmk = self.preprocess_raw(img, bbox, lmk)
@@ -351,11 +318,8 @@ class LandmarkDataset(Dataset):
         if self.cache_path.exists():
             with open(self.cache_path, 'rb') as f:
                 cache = pickle.load(f)
-            if len(cache) == len(self.img_paths):
-                LOGGER.info(f"Loaded cache ({len(cache)} samples) at {self.cache_path}")
-                return cache
-            else:
-                LOGGER.info(f"Loaded cache ({len(cache)} samples) mismatch with data ({len(self.img_paths)} samples) at {self.cache_path}")
+            LOGGER.info(f"Loaded cache ({len(cache)} samples) at {self.cache_path}")
+            return cache
 
         cache = self.build_cache()
 

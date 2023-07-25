@@ -1,6 +1,6 @@
 import platform
 
-__version__ = '0.1.11'
+__version__ = '0.1.12'
 
 LOGGING_NAME = 'landmark'
 VERBOSE = 'true'
