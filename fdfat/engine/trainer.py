@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import ConstantLR, SequentialLR, LinearLR, ReduceLROnPlateau
+from torch.optim.lr_scheduler import ConstantLR, SequentialLR, LinearLR, ReduceLROnPlateau, MultiStepLR
 
 from fdfat import __version__, MACOS, LINUX, WINDOWS
 from fdfat.utils.logger import LOGGER
@@ -48,7 +48,7 @@ class TrainEngine(BaseEngine):
     def load_checkpoint(self, checkpoint):
         super().load_checkpoint(checkpoint)
         if self.optimizer is not None:
-            self.optimizer.load_state_dict(checkpoint['optimizer']) 
+            self.optimizer.load_state_dict(self.checkpoint['optimizer']) 
 
     def save_model(self, epoch, save_path):
         ckpt = {
@@ -78,11 +78,14 @@ class TrainEngine(BaseEngine):
 
         if self.cfgs.resume:
             self.load_checkpoint(self.save_last)
+        elif self.cfgs.checkpoint is not None:
+            super.load_checkpoint(self.cfgs.checkpoint, epoch_info=False) # load weight
 
         # scheduler_warmup = ConstantLR(self.optimizer, factor=self.cfgs.lr0_factor, total_iters=self.cfgs.warmup_epoch)
         # scheduler_main = LinearLR(self.optimizer, start_factor=1/self.cfgs.lr0_factor, end_factor=self.cfgs.lre_factor, total_iters=self.cfgs.epoch-self.cfgs.warmup_epoch)
         # self.scheduler = SequentialLR(self.optimizer, schedulers=[scheduler_warmup, scheduler_main], milestones=[self.cfgs.warmup_epoch], last_epoch=self.start_epoch)
-        self.scheduler = ReduceLROnPlateau(self.optimizer, factor=self.cfgs.lre_factor, patience=self.cfgs.patience)
+        # self.scheduler = ReduceLROnPlateau(self.optimizer, factor=self.cfgs.lre_factor, patience=self.cfgs.patience)
+        self.scheduler = MultiStepLR(self.optimizer, milestones=[50,100], gamma=self.cfgs.lre_factor)
 
         if not self.cfgs.resume:
             if self.cfgs.save:
@@ -94,12 +97,12 @@ class TrainEngine(BaseEngine):
     def do_train(self):
         start_train_time = time.time()
         for current_epoch in range(self.start_epoch, self.cfgs.epoch):
-            LOGGER.info(f"\n\nEPOCH {current_epoch+1}, lr: {self.current_lr()[0]:>7f}")
+            LOGGER.info(f"\n\nEPOCH {current_epoch+1}, lr: {self.current_lr()[0]:0.7f}")
             
             train_loss_dict = train_loop(self.cfgs, current_epoch, self.train_dataloader, self.net, self.loss_fn, self.optimizer)
             test_loss_dict = val_loop(self.cfgs, current_epoch, self.test_dataloader, self.net, self.loss_fn)
-            # self.scheduler.step()
-            self.scheduler.step(test_loss_dict['total'])
+            self.scheduler.step()
+            # self.scheduler.step(test_loss_dict['total'])
 
             if test_loss_dict["total"] < self.best_epoch_loss:
                 self.best_epoch_loss = test_loss_dict["total"]

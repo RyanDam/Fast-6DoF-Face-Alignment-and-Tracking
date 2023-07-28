@@ -78,12 +78,13 @@ class BaseEngine:
             self.net.eval()
             _ = model_info(self.net, detailed=True, imgsz=self.cfgs.imgsz, device=self.cfgs.device)
 
-    def load_checkpoint(self, checkpoint, map_location='cpu'):
+    def load_checkpoint(self, checkpoint, map_location='cpu', epoch_info=True):
         if isinstance(checkpoint, str) or isinstance(checkpoint, Path):
             checkpoint = torch.load(checkpoint, map_location=map_location)
         self.checkpoint = checkpoint
         self.net.load(checkpoint)
-        self.start_epoch = checkpoint['epoch']
-        self.best_epoch_loss = checkpoint['best_fit']
-        self.best_epoch_no = checkpoint['best_epoch']
+        if epoch_info:
+            self.start_epoch = checkpoint['epoch']
+            self.best_epoch_loss = checkpoint['best_fit']
+            self.best_epoch_no = checkpoint['best_epoch']
         LOGGER.info(f"Loaded checkpoint epoch {checkpoint['epoch']}")

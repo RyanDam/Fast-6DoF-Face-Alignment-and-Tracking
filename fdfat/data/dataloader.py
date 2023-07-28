@@ -201,8 +201,9 @@ class LandmarkDataset(Dataset):
 
         if aug:
             self.aug = A.Compose([
-                # A.HorizontalFlip(p=0.5), # wrong lmk idx
-                A.Affine(scale=(0.9,1.1), translate_percent=0.1),
+                A.Resize(self.imgsz, self.imgsz),
+                # A.HorizontalFlip(p=0.5), # do not use, wrong lmk idx
+                # A.Affine(scale=(0.9,1.1), translate_percent=0.1),
                 A.ToGray(p=0.2),
                 A.Rotate (limit=10, p=0.2),
                 A.RandomBrightnessContrast(p=0.2),
@@ -217,8 +218,7 @@ class LandmarkDataset(Dataset):
                     A.Blur(blur_limit=3, p=0.1),
                 ], p=0.1),
                 A.ISONoise(p=0.2),
-                A.ImageCompression(quality_lower=50, quality_upper=90, p=0.5),
-                A.Resize(self.imgsz, self.imgsz)
+                A.ImageCompression(quality_lower=50, quality_upper=90, p=0.5)
             ], keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
         else:
             self.aug = A.Compose([
@@ -242,7 +242,8 @@ class LandmarkDataset(Dataset):
             bbox, lmk = read_raw_lmk(lmk_path)
             img = Image.open(img_path).convert("RGB")
         else:
-            img_path, bbox, lmk = deepcopy(self.cache[idx])
+            img_path, _, lmk = deepcopy(self.cache[idx])
+            bbox = gen_bbox(lmk) # intergrated translate and scale for better performance
             img = Image.open(img_path).convert("RGB")
 
         img, lmk = self.preprocess_raw(img, bbox, lmk)
