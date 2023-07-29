@@ -24,7 +24,7 @@ class BaseEngine:
             self.cfgs = cfg_
 
         init_seeds(self.cfgs.seed)
-        cv2.setNumThreads(0)  # prevent OpenCV from multithreading
+        # cv2.setNumThreads(0)  # prevent OpenCV from multithreading
 
         self.save_dir = Path(increment_path(Path(self.cfgs.project) / self.cfgs.name, exist_ok=self.cfgs.task != "train", mkdir=(self.cfgs.task == "train" and not self.cfgs.resume)))
         LOGGER.info(f"Project path: {self.save_dir}")
