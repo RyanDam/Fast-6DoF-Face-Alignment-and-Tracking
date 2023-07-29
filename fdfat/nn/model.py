@@ -247,7 +247,7 @@ class LightWeightDirectModel(BaseModel):
         if pose_rotation:
             self.aux = module5.AuxiliaryBackbone(int(32*muliplier), 3, muliplier=muliplier, act=self.act)
             
-        self.logit = module5.FERegress(1152, 70*2)
+        self.logit = module5.FERegress(((imgz//32)**2)*int(128*muliplier), 70*2)
 
         if self.pose_rotation:
             self.concat = Concat()

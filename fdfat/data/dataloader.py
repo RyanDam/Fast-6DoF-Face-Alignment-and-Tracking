@@ -160,7 +160,7 @@ LMK_POINT_MEANS = np.array([-0.27238744497299194,
  0.1218595802783966,
  -0.1859482377767563])
 
-def gen_bbox(lmk, scale=[1.4, 1.6], offset=0.2, square=True):
+def gen_bbox(lmk, imgsz, scale=[1.4, 1.6], offset=0.2, square=True):
     bbox = np.array([np.min(lmk, 0), np.max(lmk, 0)])
     size = bbox[1, :] - bbox[0, :]
     if square:
@@ -174,17 +174,33 @@ def gen_bbox(lmk, scale=[1.4, 1.6], offset=0.2, square=True):
     size = size*np.random.uniform(low=scale[0], high=scale[1], size=1)
     center = center + offset_ab
 
-    return np.vstack([center-size/2, center+size/2])
+    nbbox = np.vstack([center-size/2, center+size/2])
+    nbbox[:,0] = np.clip(nbbox[:,0], 0, imgsz[0]-1)
+    nbbox[:,1] = np.clip(nbbox[:,1], 0, imgsz[1]-1)
 
-def read_raw_lmk(lmk_path):
+    return nbbox
+
+def read_raw_lmk(lmk_path, imgsz):
 
     with open(lmk_path, 'r') as f:
         lmk = f.readlines()
         lmk = np.array([[float(n) for n in l.strip("\n").split(" ")] for l in lmk])
 
-    bbox = gen_bbox(lmk)
+    bbox = gen_bbox(lmk, imgsz)
 
     return bbox, lmk
+
+def read_img(img_path, engine="pil"):
+    if engine == "pil":
+        img = Image.open(img_path).convert("RGB")
+    elif engine == "cv2":
+        img = cv2.imread(img_path)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    return np.array(img)
+
+def crop_img(img, crop_box):
+    img = img[crop_box[1]:crop_box[3], crop_box[0]:crop_box[2], :]
+    return img
 
 class LandmarkDataset(Dataset):
 
@@ -195,7 +211,8 @@ class LandmarkDataset(Dataset):
         self.img_paths = annotations_files
         self.imgsz = cfgs.imgsz
         self.pose_rotation = cfgs.aux_pose
-        
+        self.engine = cfgs.img_read_engine
+
         self.cache_path = cache_path
         self.cache = self.read_cache()
 
@@ -238,13 +255,16 @@ class LandmarkDataset(Dataset):
     def __getitem__(self, idx):
         if self.cache is None:
             img_path = self.img_paths[idx]
+            img = read_img(img_path, engine=self.engine)
             lmk_path = img_path.replace(".png" if img_path.endswith(".png") else ".jpg", "_ldmks.txt")
-            bbox, lmk = read_raw_lmk(lmk_path)
-            img = Image.open(img_path).convert("RGB")
+            bbox, lmk = read_raw_lmk(lmk_path, img.size)
         else:
-            img_path, _, lmk = deepcopy(self.cache[idx])
-            bbox = gen_bbox(lmk) # intergrated translate and scale for better performance
-            img = Image.open(img_path).convert("RGB")
+            img_path, _, lmk, imgsz = deepcopy(self.cache[idx])
+            img = read_img(img_path, engine=self.engine)
+            bbox = gen_bbox(lmk, imgsz) # intergrated translate and scale for better performance
+
+        bbox_flat = bbox.astype(np.int32).flatten().tolist()
+        img = crop_img(img, bbox_flat)
 
         img, lmk = self.preprocess_raw(img, bbox, lmk)
         img = img.transpose((2, 0, 1))
@@ -268,39 +288,45 @@ class LandmarkDataset(Dataset):
         return img, lmk
 
     def preprocess_raw(self, img, bbox, lmk, lmk_scale=1.0):
-        croped = np.array(img.crop(bbox.astype(np.int32).flatten().tolist()))
+        # croped = np.array(img.crop(bbox.astype(np.int32).flatten().tolist()))
+        img = np.array(img)
         lmk[:, 0] -= bbox[0, 0]
         lmk[:, 1] -= bbox[0, 1]
 
         if self.aug is not None:
-            transformed = self.aug(image=croped, keypoints=lmk)
-            croped = transformed['image']
+            try:
+                transformed = self.aug(image=img, keypoints=lmk)
+            except Exception as e:
+                print(img.shape, lmk.shape, e)
+            img = transformed['image']
             lmk = transformed['keypoints']
             lmk = np.array(lmk)
 
         # normalize
-        lmk /= croped.shape[1]
+        lmk /= img.shape[1]
         lmk -= 0.5
         lmk *= lmk_scale
         lmk = lmk.astype(np.float32)
 
         if self.norm:
-            croped = normalize_tensor(croped)
-            croped = croped.astype(np.float32)
+            img = normalize_tensor(img)
+            img = img.astype(np.float32)
         else:
-            croped.astype(np.uint8)
+            img.astype(np.uint8)
 
-        return croped, lmk
+        return img, lmk
 
     def build_cache(self):
         LOGGER.info(f"Building cache")
         
         cache = []
         for img_path in tqdm.tqdm(self.img_paths):
+            img = Image.open(img_path)
+            imgsz = img.size
             lmk_path = img_path.replace(".png" if img_path.endswith(".png") else ".jpg", "_ldmks.txt")
             try:
-                bbox, lmk = read_raw_lmk(lmk_path)
-                cache.append((img_path, bbox, lmk))
+                bbox, lmk = read_raw_lmk(lmk_path, imgsz)
+                cache.append((img_path, bbox, lmk, imgsz))
             except Exception as e:
                 LOGGER.info(f"Read data error: {lmk_path}:\n{e}")
                 

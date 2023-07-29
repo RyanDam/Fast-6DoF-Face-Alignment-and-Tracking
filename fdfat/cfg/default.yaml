@@ -15,6 +15,7 @@ validation: val # validation target set in the data yaml, one of train, val, tes
 pre_norm: True # normalize data in dataloader instead of normalizing right before feeding to model 
 lmk_num: 70 # number of landmark points, 70 for face synthetic, 68 for 300w
 cache: True # cache landmark dataset
+img_read_engine: cv2 # engine using to load image, 'cv2' or 'pil'
 
 # model
 model: LightWeightModel # modelname

@@ -79,13 +79,13 @@ class TrainEngine(BaseEngine):
         if self.cfgs.resume:
             self.load_checkpoint(self.save_last)
         elif self.cfgs.checkpoint is not None:
-            super.load_checkpoint(self.cfgs.checkpoint, epoch_info=False) # load weight
+            super().load_checkpoint(self.cfgs.checkpoint, epoch_info=False) # load weight
 
         # scheduler_warmup = ConstantLR(self.optimizer, factor=self.cfgs.lr0_factor, total_iters=self.cfgs.warmup_epoch)
         # scheduler_main = LinearLR(self.optimizer, start_factor=1/self.cfgs.lr0_factor, end_factor=self.cfgs.lre_factor, total_iters=self.cfgs.epoch-self.cfgs.warmup_epoch)
         # self.scheduler = SequentialLR(self.optimizer, schedulers=[scheduler_warmup, scheduler_main], milestones=[self.cfgs.warmup_epoch], last_epoch=self.start_epoch)
         # self.scheduler = ReduceLROnPlateau(self.optimizer, factor=self.cfgs.lre_factor, patience=self.cfgs.patience)
-        self.scheduler = MultiStepLR(self.optimizer, milestones=[50,100], gamma=self.cfgs.lre_factor)
+        self.scheduler = MultiStepLR(self.optimizer, milestones=[100,130], gamma=self.cfgs.lre_factor)
 
         if not self.cfgs.resume:
             if self.cfgs.save:
