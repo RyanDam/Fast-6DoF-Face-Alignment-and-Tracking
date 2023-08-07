@@ -166,7 +166,7 @@ def render_batch(batchx, batchy, save_path):
     for idx in range(batch_size):
         img_np = (batchx[idx,...].transpose([1, 2, 0]) * 127.5) + 127.5
         img = Image.fromarray(img_np.astype(np.uint8))
-        lmk = (batchy[idx,:].reshape(70,2) + 0.5) * img.size[0]
+        lmk = (batchy[idx,:].reshape(-1,2) + 0.5) * img.size[0]
         rendered = render_lmk(img, lmk)
 
         x = int(idx/grid_w)
