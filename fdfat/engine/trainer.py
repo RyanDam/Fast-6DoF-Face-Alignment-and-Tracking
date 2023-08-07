@@ -137,4 +137,4 @@ class TrainEngine(BaseEngine):
                     self.save_model(current_epoch, self.save_best)
                     LOGGER.info(f"---> Saved best: epoch: {current_epoch+1}, loss: {self.best_epoch_loss:>7f}")
 
-        LOGGER.info(f"DONE in {int(time.time() - start_train_time)}s, best epoch: {self.best_epoch_no}, val loss: {self.best_epoch_loss:>7f}")
+        LOGGER.info(f"DONE in {int(time.time() - start_train_time)}s, best epoch: {self.best_epoch_no+1}, val loss: {self.best_epoch_loss:>7f}")

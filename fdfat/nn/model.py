@@ -390,7 +390,7 @@ class LightWeightCSPModel5(BaseModel):
         if pose_rotation:
             self.aux = module8.AuxiliaryBackbone(int(32*muliplier), 3, muliplier=muliplier, act=self.act)
             
-        output_ch = int((96 + 96 + 96)*muliplier)
+        output_ch = int((96)*muliplier) + int((96)*muliplier) + int((96)*muliplier)
         self.logit = module8.FERegress(output_ch, 70*2)
 
         if self.pose_rotation:
