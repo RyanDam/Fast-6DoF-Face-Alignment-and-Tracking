@@ -1,6 +1,5 @@
 import numpy as np
 
-
 def convert_locations_to_boxes(locations, priors, center_variance,
                                size_variance):
     """Convert regressional location results of SSD into boxes in the form of (center_x, center_y, h, w).
@@ -117,3 +116,37 @@ def hard_nms(box_scores, iou_threshold, top_k=-1, candidate_size=200):
         indexes = indexes[iou <= iou_threshold]
 
     return box_scores[picked, :]
+
+def to_landmark_box(bbox, frame_width, frame_height, offest_y=0.1, scale=1.3):
+    x, y, xx, yy = bbox
+
+    cx, cy = (xx+x)/2, (yy+y)/2
+    w, h = xx-x, yy-y
+
+    s = w if w > h else h
+    s *= scale
+
+    offset = offest_y*h
+
+    new_bbox = [
+        max(cx - s/2, 0), 
+        max(cy + offset - s/2, 0), 
+        min(cx + s/2, frame_width), 
+        min(cy + offset + s/2, frame_height)]
+    
+    new_bbox = [int(c) for c in new_bbox]
+
+    return new_bbox
+
+def stable_box(last_bbox, current_bbox, iou_thresholds=[0.6, 0.85]):
+    iou = iou_of(
+        np.expand_dims(last_bbox, axis=0),
+        np.expand_dims(current_bbox, axis=0)
+    )[0]
+    if iou > iou_thresholds[1]:
+        return last_bbox
+    elif iou < iou_thresholds[1]:
+        return current_bbox
+    else:
+        return (current_bbox + last_bbox)/2
+    
