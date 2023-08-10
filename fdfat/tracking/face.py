@@ -9,7 +9,7 @@ from fdfat.tracking import karman_filter
 
 class Face:
 
-    def __init__(self, bbox, landmark, frame_size, num_landmark=70):
+    def __init__(self, bbox, landmark, frame_size, num_landmark=70, use_karman_filter=False):
 
         self.bbox = bbox.copy()
         self._bbox_stable = bbox.copy()
@@ -22,10 +22,13 @@ class Face:
         self.pose_estimator = PoseEstimator(self.frame_width, self.frame_height)
         self.estimate_pose()
 
-        self.kalman_filters = [karman_filter.create_filter() for _ in range(num_landmark)]
-        for kal, (lmx, lmy) in zip(self.kalman_filters, landmark):
-            kal.x = np.array([[lmx, 0, lmy, 0]]).T
-            kal.P = np.eye(4) * 1000
+        self.landmark_filters = [
+            karman_filter.create_point_filter(point) for _, point in zip(range(num_landmark), landmark)
+        ]
+
+        self.use_karman_filter = use_karman_filter
+        if self.use_karman_filter:
+            self.bbox_filter = karman_filter.create_bbox_filter(bbox)
 
     @property
     def stable_landmark(self):
@@ -36,16 +39,21 @@ class Face:
         return self._bbox_stable
 
     def update_bbox(self, bbox):
-        self._bbox_stable = box_utils.stable_box(self._bbox_stable, bbox)
+        if self.use_karman_filter:
+            self.bbox_filter.predict()
+            self.bbox_filter.update(karman_filter.convert_bbox_to_z(bbox))
+            self._bbox_stable = karman_filter.convert_x_to_bbox(self.bbox_filter.x).reshape(-1).astype(np.int32)
+        else:
+            self._bbox_stable = box_utils.stable_box(self._bbox_stable, bbox)
+
         self.bbox = bbox
 
     def update_ladnmark(self, landmark):
         stabled = []
-        for kal, (lmx, lmy) in zip(self.kalman_filters, landmark):
+        for kal, (lmx, lmy) in zip(self.landmark_filters, landmark):
             kal.predict()
             kal.update((lmx, lmy))
-            x = kal.x
-            stabled.append([x[0, 0], x[2, 0]])
+            stabled.append([kal.x[0, 0], kal.x[2, 0]])
         
         self.landmark = landmark
         self._landmark_stable = np.array(stabled)

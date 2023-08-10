@@ -117,7 +117,14 @@ def hard_nms(box_scores, iou_threshold, top_k=-1, candidate_size=200):
 
     return box_scores[picked, :]
 
-def to_landmark_box(bbox, frame_width, frame_height, offest_y=0.1, scale=1.3):
+def guard_bbox_inside(bbox, frame_width, frame_height):
+    return [
+        max(bbox[0], 0), 
+        max(bbox[1], 0), 
+        min(bbox[2], frame_width), 
+        min(bbox[3], frame_height)]
+
+def to_landmark_box(bbox, offest_y=0.1, scale=1.3):
     x, y, xx, yy = bbox
 
     cx, cy = (xx+x)/2, (yy+y)/2
@@ -129,10 +136,10 @@ def to_landmark_box(bbox, frame_width, frame_height, offest_y=0.1, scale=1.3):
     offset = offest_y*h
 
     new_bbox = [
-        max(cx - s/2, 0), 
-        max(cy + offset - s/2, 0), 
-        min(cx + s/2, frame_width), 
-        min(cy + offset + s/2, frame_height)]
+        cx - s/2, 
+        cy + offset - s/2, 
+        cx + s/2, 
+        cy + offset + s/2]
     
     new_bbox = [int(c) for c in new_bbox]
 
