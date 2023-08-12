@@ -11,58 +11,84 @@ class Face:
 
     counter = 0
 
-    def __init__(self, bbox, landmark, frame_size, num_landmark=70, use_karman_filter=False):
+    def __init__(self, bbox, frame_size, landmark=None):
+        self.frame_width, self.frame_height = frame_size
+
+        self.time_since_update = 0
+        self.history = []
+        self.hits = 0
+        self.hit_streak = 0
+        self.age = 0
 
         self.id = Face.counter
         Face.counter += 1
 
         self.bbox = bbox.copy()
         self._bbox_stable = bbox.copy()
+        self.bbox_filter = karman_filter.create_bbox_filter(self.bbox)
+
+        if landmark is not None:
+            self._init_landmark(landmark)
+        else:
+            self.landmarked_initiated = False
+
+    @property
+    def stable_landmark(self):
+        stabled = []
+        for kal in self.landmark_filters:
+            stabled.append([kal.x[0, 0], kal.x[2, 0]])
+        return np.array(stabled)
+        
+    @property
+    def stable_bbox(self):
+        return karman_filter.convert_x_to_bbox(self.bbox_filter.x).reshape(-1).astype(np.int32)
+
+    def _init_landmark(self, landmark):
+        self.num_landmark = len(landmark)
         self.landmark = landmark.copy()
         self._landmark_stable = landmark.copy()
 
-        self.frame_width, self.frame_height = frame_size
-        self.num_landmark = num_landmark
+        self.landmark_filters = [
+            karman_filter.create_point_filter(point) for _, point in zip(range(self.num_landmark), landmark)
+        ]
 
         self.pose_estimator = PoseEstimator(self.frame_width, self.frame_height)
         self.estimate_pose()
 
-        self.landmark_filters = [
-            karman_filter.create_point_filter(point) for _, point in zip(range(num_landmark), landmark)
-        ]
+        self.landmarked_initiated = True
 
-        self.use_karman_filter = use_karman_filter
-        if self.use_karman_filter:
-            self.bbox_filter = karman_filter.create_bbox_filter(bbox)
+    def predict(self):
+        self.bbox_filter.predict()
 
-    @property
-    def stable_landmark(self):
-        return self._landmark_stable
+        self.age += 1
+        if (self.time_since_update > 0):
+            self.hit_streak = 0
 
-    @property
-    def stable_bbox(self):
-        return self._bbox_stable
+        self.time_since_update += 1
+
+        self.history.append(self.stable_bbox)
 
     def update_bbox(self, bbox):
-        if self.use_karman_filter:
-            self.bbox_filter.predict()
-            self.bbox_filter.update(karman_filter.convert_bbox_to_z(bbox))
-            self._bbox_stable = karman_filter.convert_x_to_bbox(self.bbox_filter.x).reshape(-1).astype(np.int32)
-        else:
-            self._bbox_stable = box_utils.stable_box(self._bbox_stable, bbox)
 
+        self.time_since_update = 0
+        self.history = []
+        self.hits += 1
+        self.hit_streak += 1
+
+        self.bbox_filter.update(karman_filter.convert_bbox_to_z(bbox))
         self.bbox = bbox
 
     def update_ladnmark(self, landmark):
-        stabled = []
+
+        if not self.landmarked_initiated:
+            self._init_landmark(landmark)
+            return
+
         for kal, (lmx, lmy) in zip(self.landmark_filters, landmark):
             kal.predict()
             kal.update((lmx, lmy))
-            stabled.append([kal.x[0, 0], kal.x[2, 0]])
         
         self.landmark = landmark
-        self._landmark_stable = np.array(stabled)
-
         self.estimate_pose()
 
     def estimate_pose(self, stable=True):
@@ -71,6 +97,10 @@ class Face:
 
     def render(self, frame):
         sbox = self.stable_bbox
+        cv2.rectangle(frame, (sbox[0], sbox[1]), (sbox[2], sbox[3]), (255, 0, 255), 4)
+
+        if not self.landmarked_initiated:
+            return
 
         lmk = self.stable_landmark.astype(np.int32)
         for begin, end in LMK_PARTS[:-1]:
@@ -83,7 +113,6 @@ class Face:
         for x, y in lmk:
             cv2.circle(frame, (x, y), 2, (255, 255, 255), 2)
             
-        # cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (255, 255, 0), 4)
-        cv2.rectangle(frame, (sbox[0], sbox[1]), (sbox[2], sbox[3]), (255, 0, 255), 4)
+        cv2.putText(frame, f"{self.id}", (sbox[0]+5, sbox[1]+30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
 
         self.pose_estimator.visualize(frame, self._pose)
