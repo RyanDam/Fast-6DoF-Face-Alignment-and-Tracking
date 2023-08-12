@@ -124,7 +124,7 @@ def guard_bbox_inside(bbox, frame_width, frame_height):
         min(bbox[2], frame_width), 
         min(bbox[3], frame_height)]
 
-def to_landmark_box(bbox, offest_y=0.1, scale=1.3):
+def to_landmark_box(bbox, offest_y=0.1, scale=1.2):
     x, y, xx, yy = bbox
 
     cx, cy = (xx+x)/2, (yy+y)/2

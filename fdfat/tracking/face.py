@@ -9,7 +9,12 @@ from fdfat.tracking import karman_filter
 
 class Face:
 
+    counter = 0
+
     def __init__(self, bbox, landmark, frame_size, num_landmark=70, use_karman_filter=False):
+
+        self.id = Face.counter
+        Face.counter += 1
 
         self.bbox = bbox.copy()
         self._bbox_stable = bbox.copy()
