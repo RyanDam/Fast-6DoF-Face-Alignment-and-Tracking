@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from fdfat.utils.utils import LMK_PARTS, LMK_PART_NAMES
+from fdfat.utils.utils import LMK_PARTS, LMK_PART_NAMES, get_color
 
 from fdfat.utils.pose_estimation import PoseEstimator
 from fdfat.utils import box_utils
@@ -97,7 +97,7 @@ class Face:
 
     def render(self, frame):
         sbox = self.stable_bbox
-        cv2.rectangle(frame, (sbox[0], sbox[1]), (sbox[2], sbox[3]), (255, 0, 255), 4)
+        cv2.rectangle(frame, (sbox[0], sbox[1]), (sbox[2], sbox[3]), get_color(self.id), 4)
 
         if not self.landmarked_initiated:
             return
