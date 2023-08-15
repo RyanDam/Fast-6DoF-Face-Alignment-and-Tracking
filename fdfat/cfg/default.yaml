@@ -24,6 +24,7 @@ aux_pose: True # model with auxiliary pose esimation
 muliplier: 1.0 # model depth multiplier
 checkpoint: # target checkpoint to load
 lmk_mean: False # use landmark mean
+face_cls: False # training with face classify
 
 # training
 resume: False # resume training
@@ -41,6 +42,8 @@ dump_batch: 1 # write sample batch for debug
 save: True # save checkpoint and stats
 pin_memory: False # use pin memory for dataloader
 aux_pose_weight: 0.5 # loss weight for auxiliary pose esimation
+face_cls_weight: 0.05 # loss weight for face classify
+loss_facecls: BCELoss # torch.nn class
 
 # trainning loss weights
 lossw_enabled: False

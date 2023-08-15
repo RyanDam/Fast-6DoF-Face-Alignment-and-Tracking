@@ -175,20 +175,27 @@ def gen_bbox(lmk, imgsz, scale=[1.4, 1.6], offset=0.2, square=True):
     center = center + offset_ab
 
     nbbox = np.vstack([center-size/2, center+size/2])
+
     nbbox[:,0] = np.clip(nbbox[:,0], 0, imgsz[0]-1)
     nbbox[:,1] = np.clip(nbbox[:,1], 0, imgsz[1]-1)
 
     return nbbox
 
 def read_raw_lmk(lmk_path, imgsz):
+    lmk_path = Path(lmk_path)
+
+    is_face = 0
+    if not lmk_path.exists():
+        return np.array([[0, 0], [imgsz[0], imgsz[1]]]), np.zeros((70, 2)), is_face
 
     with open(lmk_path, 'r') as f:
         lmk = f.readlines()
         lmk = np.array([[float(n) for n in l.strip("\n").split(" ")] for l in lmk])
 
+    is_face = 1
     bbox = gen_bbox(lmk, imgsz)
 
-    return bbox, lmk
+    return bbox, lmk, is_face
 
 def read_img(img_path, engine="pil"):
     if engine == "pil":
@@ -204,7 +211,7 @@ def crop_img(img, crop_box):
 
 class LandmarkDataset(Dataset):
 
-    def __init__(self, cfgs, annotations_files, aug=True, pose_rotation=False, cache_path=None):
+    def __init__(self, cfgs, annotations_files, aug=True, cache_path=None):
         self.lmk_num = cfgs.lmk_num
         self.lmk_mean = cfgs.lmk_mean
         self.norm = cfgs.pre_norm
@@ -212,6 +219,7 @@ class LandmarkDataset(Dataset):
         self.imgsz = cfgs.imgsz
         self.pose_rotation = cfgs.aux_pose
         self.engine = cfgs.img_read_engine
+        self.face_cls = cfgs.face_cls
 
         self.cache_path = cache_path
         self.cache = self.read_cache()
@@ -256,10 +264,11 @@ class LandmarkDataset(Dataset):
         if self.cache is None:
             img_path = self.img_paths[idx]
             img = read_img(img_path, engine=self.engine)
+            imh, imw, _ = img.shape
             lmk_path = img_path.replace(".png" if img_path.endswith(".png") else ".jpg", "_ldmks.txt")
-            bbox, lmk = read_raw_lmk(lmk_path, img.size)
+            bbox, lmk, is_face = read_raw_lmk(lmk_path, (imw, imh))
         else:
-            img_path, _, lmk, imgsz = deepcopy(self.cache[idx])
+            img_path, _, lmk, imgsz, is_face = deepcopy(self.cache[idx])
             img = read_img(img_path, engine=self.engine)
             bbox = gen_bbox(lmk, imgsz) # intergrated translate and scale for better performance
 
@@ -268,6 +277,11 @@ class LandmarkDataset(Dataset):
 
         img, lmk = self.preprocess_raw(img, bbox, lmk)
         img = img.transpose((2, 0, 1))
+
+        data_item = {
+            "img": img,
+            "is_face": np.array([is_face], dtype=np.float32)
+        }
 
         if self.pose_rotation:
             estimator = PoseEstimator(self.imgsz, self.imgsz)
@@ -278,14 +292,30 @@ class LandmarkDataset(Dataset):
             rot_weight = 1
             if np.abs(rot_vec_norm).max() > 1.5:
                 rot_weight = 0
-            lmk = np.concatenate([lmk.flatten().astype(np.float32), rot_vec_norm.astype(np.float32), np.array([rot_weight], dtype=np.float32)])
+
+            data_item["pose_rotation"] = rot_vec_norm.astype(np.float32)
+            data_item["pose_weight"] = np.array([rot_weight], dtype=np.float32)
 
         lmk = lmk.flatten()
-
         if self.lmk_mean:
             lmk[:self.lmk_num] -= LMK_POINT_MEANS[:self.lmk_num]
 
-        return img, lmk
+        data_item["landmark"] = lmk
+
+        return data_item
+
+    @staticmethod
+    def collate_fn(batch):
+        """Collates data samples into batches."""
+        new_batch = {}
+        keys = batch[0].keys()
+        values = list(zip(*[list(b.values()) for b in batch]))
+        
+        for i, k in enumerate(keys):
+            value = values[i]
+            new_batch[k] = torch.from_numpy(np.array(value).astype(np.float32))
+
+        return new_batch
 
     def preprocess_raw(self, img, bbox, lmk, lmk_scale=1.0):
         # croped = np.array(img.crop(bbox.astype(np.int32).flatten().tolist()))
@@ -325,8 +355,8 @@ class LandmarkDataset(Dataset):
             imgsz = img.size
             lmk_path = img_path.replace(".png" if img_path.endswith(".png") else ".jpg", "_ldmks.txt")
             try:
-                bbox, lmk = read_raw_lmk(lmk_path, imgsz)
-                cache.append((img_path, bbox, lmk, imgsz))
+                bbox, lmk, is_face = read_raw_lmk(lmk_path, imgsz)
+                cache.append((img_path, bbox, lmk, imgsz, is_face))
             except Exception as e:
                 LOGGER.info(f"Read data error: {lmk_path}:\n{e}")
                 
