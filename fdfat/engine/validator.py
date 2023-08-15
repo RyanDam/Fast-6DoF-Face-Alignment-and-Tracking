@@ -42,6 +42,7 @@ class ValEngine(BaseEngine):
 
         self.dataset = LandmarkDataset(self.cfgs, read_file_list(self.target_data_path, base_path=self.cfgs.data.base_path), cache_path=self.target_cache_path, aug=False)
         self.dataloader = DataLoader(self.dataset, batch_size=self.cfgs.batch_size, shuffle=False,
+                                        collate_fn=getattr(self.dataset, "collate_fn", None),
                                         pin_memory=self.cfgs.pin_memory,
                                         num_workers=self.cfgs.workers,
                                         persistent_workers=True,
@@ -53,10 +54,11 @@ class ValEngine(BaseEngine):
         self.target_checkpoint_path = self.cfgs.checkpoint if self.cfgs.checkpoint is not None else self.save_best
         self.load_checkpoint(self.target_checkpoint_path)
         self.loss_fn = getattr(nn, self.cfgs.loss)(reduction='none')
+        self.loss_face_fn = getattr(nn, self.cfgs.loss_facecls)(reduction='none') if self.cfgs.face_cls else None
 
     def do_validate(self, verbose=True):
         start_time = time.time()
-        loss_dict = val_loop(self.cfgs, 0, self.dataloader, self.net, self.loss_fn)
+        loss_dict = val_loop(self.cfgs, 0, self.dataloader, self.net, self.loss_fn, face_loss_fn=self.loss_face_fn)
         LOGGER.info(f"DONE in {int(time.time() - start_time)}s")
 
         if verbose:

@@ -30,6 +30,7 @@ class TrainEngine(BaseEngine):
         LOGGER.info("Load Train data")
         self.dataset = LandmarkDataset(self.cfgs, read_file_list(self.cfgs.data.train, base_path=self.cfgs.data.base_path), cache_path=self.cfgs.data.train_cache)
         self.train_dataloader = DataLoader(self.dataset, batch_size=self.cfgs.batch_size, shuffle=True, 
+                                        collate_fn=getattr(self.dataset, "collate_fn", None),
                                         pin_memory=self.cfgs.pin_memory,
                                         num_workers=self.cfgs.workers,
                                         persistent_workers=True,
@@ -38,6 +39,7 @@ class TrainEngine(BaseEngine):
         LOGGER.info("Load Val data")
         self.dataset_test = LandmarkDataset(self.cfgs, read_file_list(self.cfgs.data.val, base_path=self.cfgs.data.base_path), cache_path=self.cfgs.data.val_cache, aug=False)
         self.test_dataloader = DataLoader(self.dataset_test, batch_size=self.cfgs.batch_size, shuffle=False,
+                                        collate_fn=getattr(self.dataset_test, "collate_fn", None),
                                         pin_memory=self.cfgs.pin_memory,
                                         num_workers=self.cfgs.workers,
                                         persistent_workers=True,
@@ -71,6 +73,8 @@ class TrainEngine(BaseEngine):
 
     def prepare(self):
         self.loss_fn = getattr(nn, self.cfgs.loss)(reduction='none')
+        self.loss_face_fn = getattr(nn, self.cfgs.loss_facecls)(reduction='none') if self.cfgs.face_cls else None
+        
         if self.cfgs.optimizer == "SGD":
             self.optimizer = getattr(torch.optim, self.cfgs.optimizer)(self.net.parameters(), lr=self.cfgs.lr, momentum=0.95, nesterov=True)
         else:
@@ -100,8 +104,8 @@ class TrainEngine(BaseEngine):
         for current_epoch in range(self.start_epoch, self.cfgs.epoch):
             LOGGER.info(f"\n\nEPOCH {current_epoch+1}, lr: {self.current_lr()[0]:0.7f}")
             
-            train_loss_dict = train_loop(self.cfgs, current_epoch, self.train_dataloader, self.net, self.loss_fn, self.optimizer)
-            test_loss_dict = val_loop(self.cfgs, current_epoch, self.test_dataloader, self.net, self.loss_fn)
+            train_loss_dict = train_loop(self.cfgs, current_epoch, self.train_dataloader, self.net, self.loss_fn, self.optimizer, face_loss_fn=self.loss_face_fn)
+            test_loss_dict = val_loop(self.cfgs, current_epoch, self.test_dataloader, self.net, self.loss_fn, face_loss_fn=self.loss_face_fn)
             self.scheduler.step()
             # self.scheduler.step(test_loss_dict['total'])
 

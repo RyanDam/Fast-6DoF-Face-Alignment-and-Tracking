@@ -74,7 +74,7 @@ class BaseEngine:
 
     def load_model(self, verbose=True):
         LOGGER.info(f"Load model: {self.cfgs.model}")
-        self.net = getattr(model, self.cfgs.model)(imgz=self.cfgs.imgsz, muliplier=self.cfgs.muliplier, pose_rotation=self.cfgs.aux_pose).to(self.cfgs.device)
+        self.net = getattr(model, self.cfgs.model)(imgz=self.cfgs.imgsz, muliplier=self.cfgs.muliplier, pose_rotation=self.cfgs.aux_pose, face_cls=self.cfgs.face_cls).to(self.cfgs.device)
         if verbose:
             # need to call this before getting model info to prevent abnormal batchnorm
             self.net.eval()

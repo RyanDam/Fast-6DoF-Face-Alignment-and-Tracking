@@ -13,6 +13,7 @@ from . import module5
 from . import module6
 from . import module7
 from . import module8
+from . import module9
 
 class BaseModel(nn.Module):
 
@@ -376,9 +377,10 @@ class LightWeightCSPModel5(BaseModel):
 
     default_act = nn.ReLU6()  # default activation
 
-    def __init__(self, imgz=128, muliplier=1, pose_rotation=False, act=True):
+    def __init__(self, imgz=128, muliplier=1, pose_rotation=False, act=True, face_cls=False):
         super().__init__()
         self.pose_rotation = pose_rotation
+        self.face_cls = face_cls
 
         self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
 
@@ -391,9 +393,73 @@ class LightWeightCSPModel5(BaseModel):
             self.aux = module8.AuxiliaryBackbone(int(32*muliplier), 3, muliplier=muliplier, act=self.act)
             
         output_ch = int((96)*muliplier) + int((96)*muliplier) + int((96)*muliplier)
+
+        if self.face_cls:
+            self.classifier = nn.Sequential(
+                nn.Linear(output_ch, 1),
+                nn.Sigmoid()
+            )
+
         self.logit = module8.FERegress(output_ch, 70*2)
 
+        if self.pose_rotation or self.face_cls:
+            self.concat = Concat()
+
+        initialize_weights(self)
+
+    def forward(self, x):
+
+        x = self.backbone(x)
+        
         if self.pose_rotation:
+            aux = self.aux(x)
+
+        fea = self.mainstream(x)
+        
+        x = self.logit(fea)
+
+        if self.face_cls:
+            face_cls = self.classifier(fea)
+            x = self.concat([x, face_cls])
+
+        if self.pose_rotation:
+            x = self.concat([x, aux])
+
+        return x
+
+class LightWeightCSPModel5SiLU(LightWeightCSPModel5):
+
+    def __init__(self, imgz=128, muliplier=1, pose_rotation=False, act=True, face_cls=False):
+        super().__init__(imgz=imgz, muliplier=muliplier, pose_rotation=pose_rotation, act=nn.SiLU(), face_cls=face_cls)
+
+class LightWeightCSPModel6(BaseModel):
+
+    default_act = nn.ReLU6()  # default activation
+
+    def __init__(self, imgz=128, muliplier=1, pose_rotation=False, act=True, face_cls=False):
+        super().__init__()
+        self.pose_rotation = pose_rotation
+        self.face_cls = face_cls
+
+        self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
+
+        # backbone, output size = size/4
+        self.backbone = module9.LightWeightBackbone(muliplier=muliplier, act=self.act)
+
+        self.mainstream = module9.MainStreamModule(muliplier=muliplier, act=self.act)
+
+        if self.pose_rotation:
+            self.aux = module9.AuxiliaryBackbone(int(32*muliplier), 3, muliplier=muliplier, act=self.act)
+            
+        output_ch = int((96)*muliplier) + int((96)*muliplier) + int((96)*muliplier)
+
+        if self.face_cls:
+            pass
+
+        
+        self.logit = module9.FERegress(output_ch, 70*2)
+
+        if self.pose_rotation or self.face_cls:
             self.concat = Concat()
 
         initialize_weights(self)
@@ -414,7 +480,7 @@ class LightWeightCSPModel5(BaseModel):
 
         return x
 
-class LightWeightCSPModel5SiLU(LightWeightCSPModel5):
+class LightWeightCSPModel6SiLU(LightWeightCSPModel6):
 
     def __init__(self, imgz=128, muliplier=1, pose_rotation=False, act=True):
         super().__init__(imgz=imgz, muliplier=muliplier, pose_rotation=pose_rotation, act=nn.SiLU())
