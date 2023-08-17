@@ -115,4 +115,6 @@ class Face:
             
         cv2.putText(frame, f"{self.id}", (sbox[0]+5, sbox[1]+30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
 
+        cv2.putText(frame, f"{self.face_score*100:0.1f}", (sbox[0]+5, sbox[1]+60), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
+
         self.pose_estimator.visualize(frame, self._pose)
