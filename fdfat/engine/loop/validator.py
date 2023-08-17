@@ -44,7 +44,7 @@ def val_loop(cfgs, current_epoch, dataloader, model, loss_fn, face_loss_fn=None,
                 loss_devide += 1
 
             if cfgs.face_cls:
-                face_loss = face_loss_fn(pred[:,:cfgs.lmk_num*2+1], face_clss)
+                face_loss = face_loss_fn(pred[:,cfgs.lmk_num*2:cfgs.lmk_num*2+1], face_clss)
                 face_loss *= cfgs.face_cls_weight
 
                 total_loss = total_loss + face_loss.mean()
