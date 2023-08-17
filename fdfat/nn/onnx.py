@@ -78,16 +78,23 @@ class FaceDetector(ONNXModel):
     
 class LandmarkAligner(ONNXModel):
 
-    def predict(self, ori_img):
+    def predict(self, ori_img, have_face_cls=False):
         height, width, _ = ori_img.shape
 
         img = self.preprocess(ori_img)
         lmk = self.session.run([], {'input': img})[0]
-        lmk = lmk[0][:70*2].reshape((70,2))
+
+        if have_face_cls:
+            lmk, face_cls = lmk[0][:70*2].reshape((70,2)), lmk[0][70*2]
+        else:
+            lmk = lmk[0][:70*2].reshape((70,2))
 
         lmk += 0.5
         lmk[:,0] *= width
         lmk[:,1] *= height
 
+        if have_face_cls:
+            return lmk, face_cls
+        
         return lmk
     
