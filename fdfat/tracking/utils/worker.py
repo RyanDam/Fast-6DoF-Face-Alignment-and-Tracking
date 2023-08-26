@@ -48,7 +48,7 @@ class Worker(Process):
         logger = set_logger(colored('%s-%d' % (self.name, self.worker_id), self.color))
         logger.info("Starting worker {}...".format(self.worker_id))
 
-        recv_socket.connect(self.main_thread_addr)
+        recv_socket.connect(self.source_address)
         addr_to_source = auto_bind(send_socket)
         recv_socket.send(addr_to_source.encode('ascii'))
         logger.info("Starting worker {}... DONE".format(self.worker_id))
