@@ -15,8 +15,8 @@ class ONNXModel:
         self.input_width, self.input_height = input_size
 
         sess_options = ort.SessionOptions()
-        # sess_options.intra_op_num_threads = 1
-        # sess_options.inter_op_num_threads = 1
+        sess_options.intra_op_num_threads = 1
+        sess_options.inter_op_num_threads = 1
         # sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
         # sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
         self.session = ort.InferenceSession(self.model_path, sess_options, providers=ONNX_BACKENDS)
@@ -98,3 +98,21 @@ class LandmarkAligner(ONNXModel):
         
         return lmk
     
+    def predict_frame(self, frame, bbox, have_face_cls=False):
+
+        fheight, fwidth, _ = frame.shape
+        lmk_box = box_utils.guard_bbox_inside(bbox, fwidth, fheight)
+
+        face_img = frame[lmk_box[1]:lmk_box[3], lmk_box[0]:lmk_box[2], :]
+        lmk = self.predict(face_img, have_face_cls=have_face_cls)
+
+        if have_face_cls:
+            lmk, face_cls = lmk
+
+        lmk[:, 0] += lmk_box[0]
+        lmk[:, 1] += lmk_box[1]
+
+        if have_face_cls:
+            return lmk, face_cls
+        
+        return lmk
