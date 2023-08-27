@@ -11,7 +11,7 @@ class Face:
 
     counter = 0
 
-    def __init__(self, bbox, frame_size, landmark=None):
+    def __init__(self, bbox, frame_size, landmark=None, score=-1):
         self.frame_width, self.frame_height = frame_size
 
         self.time_since_update = 0
@@ -19,6 +19,7 @@ class Face:
         self.hits = 0
         self.hit_streak = 0
         self.age = 0
+        self.face_score = score
 
         self.id = Face.counter
         Face.counter += 1
@@ -41,7 +42,7 @@ class Face:
         
     @property
     def stable_bbox(self):
-        return karman_filter.convert_x_to_bbox(self.bbox_filter.x).reshape(-1).astype(np.int32)
+        return karman_filter.convert_x_to_bbox(self.bbox_filter.x).reshape(-1)
 
     def _init_landmark(self, landmark):
         self.num_landmark = len(landmark)
@@ -96,7 +97,11 @@ class Face:
         self._pose = self.pose_estimator.solve(np.float32([(a[0], a[1]) for a in lmk[:68,:]]))
 
     def render(self, frame):
-        sbox = self.stable_bbox
+
+        tbox = self.bbox.astype(np.int32)
+        cv2.rectangle(frame, (tbox[0], tbox[1]), (tbox[2], tbox[3]), (0,0,0), 4)
+
+        sbox = self.stable_bbox.astype(np.int32)
         cv2.rectangle(frame, (sbox[0], sbox[1]), (sbox[2], sbox[3]), get_color(self.id), 4)
 
         if not self.landmarked_initiated:

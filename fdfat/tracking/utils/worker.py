@@ -1,3 +1,4 @@
+import time
 import zmq
 import zmq.decorators as zmqd
 import multiprocessing
@@ -68,3 +69,5 @@ class Worker(Process):
                 import traceback
                 tb=traceback.format_exc()
                 logger.error('{}\n{}'.format(e, tb))
+
+            time.sleep(0.005)

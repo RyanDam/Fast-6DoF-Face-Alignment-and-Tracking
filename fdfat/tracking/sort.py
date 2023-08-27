@@ -75,27 +75,11 @@ class SORT:
 
         return matches, np.array(unmatched_detections), np.array(unmatched_trackers)
 
-    def update(self, detections):
-        ## detections: [x, y, xx, yy, score]
-        self.frame_count += 1
-
-        # predict next location of tracker
-        trackers = np.zeros((len(self.trackers), 5))
-        for idx, t in enumerate(self._trackers):
+    def predict(self):
+        for t in self._trackers:
             t.predict()
-            box = t.stable_bbox
-            trackers[idx, :] = [box[0], box[1], box[2], box[3], 0]
 
-        matched, unmatched_dets, unmatched_trks = self.match_detections_to_tracks(detections, trackers)
-
-        for idx_det, idx_trk in matched:
-            self.trackers[idx_trk].update_bbox(detections[idx_det][:4])
-
-        # create and initialise new trackers for unmatched detections
-        for idx_det in unmatched_dets:
-            trk = Face(detections[idx_det][:4], self.frame_size)
-            self._trackers.append(trk)
-
+    def re_evaluate(self):
         results = []
         i = len(self._trackers)
         for trk in reversed(self._trackers):
@@ -103,9 +87,37 @@ class SORT:
                 and (trk.hit_streak >= self.min_hits or self.frame_count <= self.min_hits):
                 results.append(trk)
             i -= 1
-
             # remove dead tracklet
             if(trk.time_since_update > self.max_age):
                 self._trackers.pop(i)
+        return results
+
+    def update(self, detections, landmarks):
+        ## detections: [x, y, xx, yy, score]
+        self.frame_count += 1
+
+        # predict next location of tracker
+        self.predict()
+
+        # build track bbox for matching
+        trackers = np.zeros((len(self.trackers), 5))
+        for idx, t in enumerate(self._trackers):
+            box = t.stable_bbox
+            trackers[idx, :] = [box[0], box[1], box[2], box[3], 0]
+
+        # matching
+        matched, unmatched_dets, unmatched_trks = self.match_detections_to_tracks(detections, trackers)
+
+        # update matched track
+        for idx_det, idx_trk in matched:
+            self._trackers[idx_trk].update_bbox(detections[idx_det][:4])
+            self._trackers[idx_trk].update_ladnmark(landmarks[idx_det])
+
+        # create and initialise new trackers for unmatched detections
+        for idx_det in unmatched_dets:
+            trk = Face(detections[idx_det][:4], self.frame_size, landmark=landmarks[idx_det])
+            self._trackers.append(trk)
+
+        results = self.re_evaluate()
             
         return results

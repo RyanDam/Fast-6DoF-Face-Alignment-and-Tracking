@@ -174,3 +174,23 @@ def stable_box(last_bbox, current_bbox, iou_thresholds=[0.6, 0.85]):
     else:
         return (current_bbox + last_bbox)/2
     
+def bbox_from_landmark(lmk, scale=1.5, offset=0, square=True):
+    bbox = np.array([np.min(lmk, 0), np.max(lmk, 0)])
+    size = bbox[1, :] - bbox[0, :]
+    if square:
+        m = np.max(size)
+        size[0] = m
+        size[1] = m
+    center = (bbox[1, :] + bbox[0, :])/2
+
+    offset_ab = offset*size
+    size = size*scale
+
+    center[1] += offset_ab[1]
+
+    nbbox = np.vstack([center-size/2, center+size/2])
+
+    # nbbox[:,0] = np.clip(nbbox[:,0], 0, imgsz[0]-1)
+    # nbbox[:,1] = np.clip(nbbox[:,1], 0, imgsz[1]-1)
+
+    return nbbox
