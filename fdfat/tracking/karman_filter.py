@@ -42,7 +42,7 @@ def create_point_filter(point, dt=1, R_std=0.1, Q_std=0.04):
     q = Q_discrete_white_noise(dim=2, dt=dt, var=Q_std**2)
     tracker.Q = block_diag(q, q)
     tracker.x = np.array([[point[0], 0, point[1], 0]]).T
-    tracker.P = np.eye(4) * 500.
+    tracker.P = np.eye(4) * 100.
     return tracker
 
 def create_bbox_filter(bbox, dt=1):
@@ -62,7 +62,7 @@ def create_bbox_filter(bbox, dt=1):
                           [0,0,0,1,0,0,0]])
 
     tracker.R[2:,2:] *= 10.
-    tracker.P[4:,4:] *= 1000. #give high uncertainty to the unobservable initial velocities
+    tracker.P[4:,4:] *= 100. # give high uncertainty to the unobservable initial velocities
     tracker.P *= 10.
     tracker.Q[-1,-1] *= 0.01
     tracker.Q[4:,4:] *= 0.01
