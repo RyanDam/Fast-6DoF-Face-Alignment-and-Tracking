@@ -5,21 +5,27 @@ import onnxruntime as ort
 from fdfat.utils import box_utils
 
 # ONNX_BACKENDS = ['CoreMLExecutionProvider', 'CPUExecutionProvider']
-ONNX_BACKENDS = ['CoreMLExecutionProvider']
+# ONNX_BACKENDS = ['CoreMLExecutionProvider']
+ONNX_BACKENDS = ['CPUExecutionProvider']
 
 class ONNXModel:
 
-    def __init__(self, model_path, input_size=(96, 96)):
+    def __init__(self, model_path, channel_first=True):
 
         self.model_path = model_path
-        self.input_width, self.input_height = input_size
+        # self.input_width, self.input_height = input_size
 
         sess_options = ort.SessionOptions()
         sess_options.intra_op_num_threads = 1
         sess_options.inter_op_num_threads = 1
-        # sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
-        # sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+        sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+        sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
         self.session = ort.InferenceSession(self.model_path, sess_options, providers=ONNX_BACKENDS)
+
+        if channel_first:
+            _, _, self.input_height, self.input_width = self.session.get_inputs()[0].shape
+        else:
+            _, self.input_height, self.input_width, _ = self.session.get_inputs()[0].shape
 
     def preprocess(self, img):
 
