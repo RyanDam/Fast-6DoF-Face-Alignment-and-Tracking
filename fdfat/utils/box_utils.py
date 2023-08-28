@@ -190,7 +190,4 @@ def bbox_from_landmark(lmk, scale=1.5, offset=0, square=True):
 
     nbbox = np.vstack([center-size/2, center+size/2])
 
-    # nbbox[:,0] = np.clip(nbbox[:,0], 0, imgsz[0]-1)
-    # nbbox[:,1] = np.clip(nbbox[:,1], 0, imgsz[1]-1)
-
     return nbbox

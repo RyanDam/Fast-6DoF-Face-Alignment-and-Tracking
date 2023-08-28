@@ -21,7 +21,6 @@ class SORT:
         self.min_hits = min_hits
         self.frame_count = 0
         self.frame_size = frame_size
-
         self._trackers = []
 
     @property
