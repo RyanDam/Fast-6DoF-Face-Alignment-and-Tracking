@@ -11,9 +11,9 @@ from .logger import set_logger
 
 class Worker(Process):
 
-    def __init__(self, id, source_address, name='WORKER', color='yellow'):
+    def __init__(self, args, id, source_address, name='WORKER', color='yellow'):
         super().__init__()
-
+        self.args = args
         self.name = name
         self.color = color
         self.worker_id = id
@@ -37,7 +37,7 @@ class Worker(Process):
     def run(self):
         self._run()
 
-    def get_model(self):
+    def get_model(self, args):
         raise NotImplementedError("'get_model' function is not implemented")
     
     def predict(self, model, img):
@@ -55,7 +55,7 @@ class Worker(Process):
         logger.info("Starting worker {}... DONE".format(self.worker_id))
 
         logger.info("Init model...")
-        model = self.get_model()
+        model = self.get_model(self.args)
         logger.info("Init model... DONE")
 
         self.is_ready.set()
