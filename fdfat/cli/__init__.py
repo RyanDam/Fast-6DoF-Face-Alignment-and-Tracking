@@ -10,8 +10,6 @@ from types import SimpleNamespace
 
 from fdfat.utils.logger import LOGGER
 from fdfat.cfg import get_cfg
-# from fdfat.main import TrainEngine, ValEngine, TestEngine, 
-from fdfat.engine import trainer, validator, predictor, exporter
 
 def parse_bool(v):
     return v.lower() in ("yes", "true", "t", "1")
@@ -31,19 +29,29 @@ def entrypoint():
     args = SimpleNamespace(**vars(args))
     
     if args.task == "train":
+        from fdfat.engine import trainer
         engine = trainer.TrainEngine(args)
         engine.prepare()
         engine.do_train()
     elif args.task == "val":
+        from fdfat.engine import validator
         engine = validator.ValEngine(args)
         engine.prepare()
         engine.do_validate()
     elif args.task == "predict":
+        from fdfat.engine import predictor
         engine = predictor.PredictEngine(args)
         if args.input is None:
             raise ValueError("Input is empty")
         lmk, rendered = engine.predict(args.input, render=True)
         rendered.save("predict.jpg")
     elif args.task == "export":
+        from fdfat.engine import exporter
         engine = exporter.ExportEngine(args)
         engine.export()
+    elif args.task == "track":
+        from fdfat.tracking.facial_sort import FacialSORT
+        sort = FacialSORT(args)
+        sort.run()
+    else:
+        raise AttributeError(f"task '{args.task}' is not supported")

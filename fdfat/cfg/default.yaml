@@ -1,5 +1,5 @@
 # general
-task: train # train, val, predict, export
+task: train # train, val, predict, export, track
 name: Landmark # name of experiment
 project: # path to project folder
 seed: 0  # random seed for reproducibility
@@ -63,3 +63,14 @@ test_warmup: True # warming up model when testing
 # export
 export_format: tflite # torchscript, onnx, saved_model, tflite
 export_simplify: True # simplify onnx model using onnxsim
+
+# tracking
+track_source: video # video, camera
+track_visualize: True # visualize frame during process
+track_sort_iou_threshold: 0.3 # iou threshold for SORT matching
+track_max_age: 30 # maximum frame to hold a track
+track_min_hit: 3 # minimum frame to consider a track
+track_save: # save rendered frame to video file
+track_detector: # detector onnx model
+track_detector_fps: 2 # maximum fps for detector
+track_landmark: # landmark onnx model
