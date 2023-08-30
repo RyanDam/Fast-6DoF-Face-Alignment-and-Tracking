@@ -25,6 +25,7 @@ muliplier: 1.0 # model depth multiplier
 checkpoint: # target checkpoint to load
 lmk_mean: False # use landmark mean
 face_cls: False # training with face classify
+freeze_landmark: False # freeze landmark backbone, useful for training face cls
 
 # training
 resume: False # resume training
