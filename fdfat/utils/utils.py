@@ -59,7 +59,7 @@ def render_lmk_nme(nme, imgsz=1024, base_radius=200, title=None):
 
     return target
 
-def render_lmk(img, lmk, point_size=2, render=False):
+def render_lmk(img, lmk, point_size=2, render=False, line_color=((255, 0, 0)), point_color=(255, 255, 0)):
 
     draw = ImageDraw.Draw(img)
 
@@ -67,11 +67,11 @@ def render_lmk(img, lmk, point_size=2, render=False):
         lx, ly = lmk[begin]
         for idx in range(begin+1, end):
             x, y = lmk[idx]
-            draw.line([lx, ly, x, y], width=2, fill=(255, 0, 0))
+            draw.line([lx, ly, x, y], width=2, fill=line_color)
             lx, ly = x, y
 
     for x, y in lmk:
-        draw.rectangle([x-point_size/2, y-point_size/2, x+point_size/2, y+point_size/2], fill=(255, 255, 0))
+        draw.rectangle([x-point_size/2, y-point_size/2, x+point_size/2, y+point_size/2], fill=point_color)
 
     # bbox = gen_bbox(lmk)
 
