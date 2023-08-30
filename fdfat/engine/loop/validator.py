@@ -55,7 +55,7 @@ def val_loop(cfgs, current_epoch, dataloader, model, loss_fn, face_loss_fn=None,
             total_loss /= loss_devide
 
             loss_dict["total"] += total_loss.item()
-            nme_val = nme(pred[face_clss[:,0] > 0.5,:68*2], y_device[face_clss[:,0] > 0.5,:68*2], reduced=False).cpu().detach().numpy()
+            nme_val = nme(pred[:,:68*2], y_device[:,:68*2], reduced=False)[face_clss[:,0]>0.5,...].cpu().detach().numpy()
             loss_dict["nme"] += nme_val.mean()
             nme_list.append(nme_val)
 

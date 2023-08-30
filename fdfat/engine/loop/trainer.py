@@ -81,7 +81,7 @@ def train_loop(cfgs, current_epoch, dataloader, model, loss_fn, optimizer, face_
         # if cfgs.lmk_mean:
         #     nme_val = nme(pred[:,:68*2], y_device[:,:68*2]).mean().cpu().detach().numpy()
         # else:
-        nme_val = nme(pred[face_clss[:,0] > 0.5,:68*2], y_device[face_clss[:,0] > 0.5,:68*2]).mean().cpu().detach().numpy()
+        nme_val = nme(pred[:,:68*2], y_device[:,:68*2])[face_clss[:,0]>0.5].mean().cpu().detach().numpy()
         loss_dict["nme"] += nme_val
         nme_list.append(nme_val)
 

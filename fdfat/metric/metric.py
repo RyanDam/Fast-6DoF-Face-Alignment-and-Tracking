@@ -24,3 +24,4 @@ def nme(pred, gt, left_index=[36], right_index=[45], reduced=True):
         return error.mean(dim=1)
     else:
         return error
+    

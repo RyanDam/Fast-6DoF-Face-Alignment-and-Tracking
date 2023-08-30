@@ -377,7 +377,7 @@ class LightWeightCSPModel5(BaseModel):
 
     default_act = nn.ReLU6()  # default activation
 
-    def __init__(self, imgz=128, muliplier=1, pose_rotation=False, act=True, face_cls=False):
+    def __init__(self, imgz=128, muliplier=1, pose_rotation=False, act=True, face_cls=False, freeze_lmk=False):
         super().__init__()
         self.pose_rotation = pose_rotation
         self.face_cls = face_cls
@@ -394,13 +394,29 @@ class LightWeightCSPModel5(BaseModel):
             
         output_ch = int((96)*muliplier) + int((96)*muliplier) + int((96)*muliplier)
 
+        self.logit = module8.FERegress(output_ch, 70*2)
+
+        if freeze_lmk:
+            print("Freezing landmark backbone")
+            for param in self.backbone.parameters():
+                param.requires_grad = False
+            for param in self.mainstream.parameters():
+                param.requires_grad = False
+            if pose_rotation:
+                for param in self.aux.parameters():
+                    param.requires_grad = False
+            for param in self.logit.parameters():
+                param.requires_grad = False
+
         if self.face_cls:
             self.classifier = nn.Sequential(
-                nn.Linear(output_ch, 1),
+                DWConv(int(32*muliplier), int(32*muliplier), k=3, s=2, act=self.act),
+                DWConv(int(32*muliplier), int(64*muliplier), k=3, s=2, act=self.act),
+                nn.AdaptiveMaxPool2d((1, 1)),
+                nn.Flatten(start_dim=1),
+                nn.Linear(int(64*muliplier), 1),
                 nn.Sigmoid()
             )
-
-        self.logit = module8.FERegress(output_ch, 70*2)
 
         if self.pose_rotation or self.face_cls:
             self.concat = Concat()
@@ -414,12 +430,14 @@ class LightWeightCSPModel5(BaseModel):
         if self.pose_rotation:
             aux = self.aux(x)
 
+        if self.face_cls:
+            face_cls = self.classifier(x)
+
         fea = self.mainstream(x)
         
         x = self.logit(fea)
 
         if self.face_cls:
-            face_cls = self.classifier(fea)
             x = self.concat([x, face_cls])
 
         if self.pose_rotation:
@@ -429,8 +447,8 @@ class LightWeightCSPModel5(BaseModel):
 
 class LightWeightCSPModel5SiLU(LightWeightCSPModel5):
 
-    def __init__(self, imgz=128, muliplier=1, pose_rotation=False, act=True, face_cls=False):
-        super().__init__(imgz=imgz, muliplier=muliplier, pose_rotation=pose_rotation, act=nn.SiLU(), face_cls=face_cls)
+    def __init__(self, imgz=128, muliplier=1, pose_rotation=False, act=True, face_cls=False, freeze_lmk=False):
+        super().__init__(imgz=imgz, muliplier=muliplier, pose_rotation=pose_rotation, act=nn.SiLU(), face_cls=face_cls, freeze_lmk=freeze_lmk)
 
 class LightWeightCSPModel6(BaseModel):
 
