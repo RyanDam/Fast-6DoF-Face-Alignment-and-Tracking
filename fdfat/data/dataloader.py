@@ -224,6 +224,7 @@ class LandmarkDataset(Dataset):
         self.cache_path = cache_path
         self.cache = self.read_cache()
 
+        self.need_aug = aug
         if aug:
             self.aug = A.Compose([
                 A.Resize(self.imgsz, self.imgsz),
@@ -268,9 +269,10 @@ class LandmarkDataset(Dataset):
             lmk_path = img_path.replace(".png" if img_path.endswith(".png") else ".jpg", "_ldmks.txt")
             bbox, lmk, is_face = read_raw_lmk(lmk_path, (imw, imh))
         else:
-            img_path, _, lmk, imgsz, is_face = deepcopy(self.cache[idx])
+            img_path, bbox, lmk, imgsz, is_face = deepcopy(self.cache[idx])
             img = read_img(img_path, engine=self.engine)
-            bbox = gen_bbox(lmk, imgsz) # intergrated translate and scale for better performance
+            if self.need_aug and is_face:
+                bbox = gen_bbox(lmk, imgsz) # intergrated translate and scale for better performance
 
         bbox_flat = bbox.astype(np.int32).flatten().tolist()
         img = crop_img(img, bbox_flat)
