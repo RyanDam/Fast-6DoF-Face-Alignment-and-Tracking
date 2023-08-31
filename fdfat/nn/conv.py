@@ -3,7 +3,7 @@ import math
 import torch
 from torch import nn
 
-__all__ = ['autopad', 'Conv', 'DWConv', 'Concat', 'IdentifyBlock', 'C2f', 'Bottleneck', 'initialize_weights']
+__all__ = ['autopad', 'Conv', 'DWConv', 'Concat', 'IdentifyBlock', 'C2f', 'Bottleneck', 'initialize_weights', 'freeze_parameters']
 
 def initialize_weights(model):
     """Initialize model weights to random values."""
@@ -16,6 +16,14 @@ def initialize_weights(model):
             m.momentum = 0.03
         elif t in [nn.Hardswish, nn.LeakyReLU, nn.ReLU, nn.ReLU6, nn.SiLU]:
             m.inplace = True
+
+def freeze_parameters(module):
+    for param in module.parameters():
+        param.requires_grad = False
+    for m in module.modules():
+        if isinstance(m, nn.BatchNorm2d):
+            m.track_running_stats = False
+            m.eval()
 
 def autopad(k, p=None, d=1):  # kernel, padding, dilation
     """Pad to 'same' shape outputs."""

@@ -34,6 +34,7 @@ def train_loop(cfgs, current_epoch, dataloader, model, loss_fn, optimizer, face_
     pbar = tqdm.tqdm(enumerate(dataloader), total=num_batches, bar_format=TQDM_BAR_FORMAT)
 
     model.train()
+    if cfgs.freeze_landmark: model.freeze()
     for batch, data in pbar:
         x_device = data["img"].to(cfgs.device, non_blocking=True)
         y_device = data["landmark"].to(cfgs.device, non_blocking=True)

@@ -20,6 +20,9 @@ class BaseModel(nn.Module):
     def __init__(self):
         super().__init__()
 
+    def freeze(self):
+        pass
+
     def forward(self, x):
         return x
     
@@ -397,16 +400,7 @@ class LightWeightCSPModel5(BaseModel):
         self.logit = module8.FERegress(output_ch, 70*2)
 
         if freeze_lmk:
-            print("Freezing landmark backbone")
-            for param in self.backbone.parameters():
-                param.requires_grad = False
-            for param in self.mainstream.parameters():
-                param.requires_grad = False
-            if pose_rotation:
-                for param in self.aux.parameters():
-                    param.requires_grad = False
-            for param in self.logit.parameters():
-                param.requires_grad = False
+            self.freeze()
 
         if self.face_cls:
             self.classifier = nn.Sequential(
@@ -422,6 +416,13 @@ class LightWeightCSPModel5(BaseModel):
             self.concat = Concat()
 
         initialize_weights(self)
+
+    def freeze(self):
+        print("Freezing landmark backbone")
+        freeze_parameters(self.backbone)
+        freeze_parameters(self.mainstream)
+        if self.pose_rotation: freeze_parameters(self.aux)
+        freeze_parameters(self.logit)
 
     def forward(self, x):
 
