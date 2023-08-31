@@ -80,6 +80,12 @@ class LWModel(BaseModel):
 
         initialize_weights(self)
 
+    def freeze(self):
+        freeze_parameters(self.backbone)
+        freeze_parameters(self.mainstream)
+        if self.pose_rotation: freeze_parameters(self.aux)
+        freeze_parameters(self.logit)
+
     def forward(self, x):
 
         x = self.backbone(x)
@@ -145,7 +151,6 @@ class LWCSPModel(BaseModel):
         initialize_weights(self)
 
     def freeze(self):
-        print("Freezing landmark backbone")
         freeze_parameters(self.backbone)
         freeze_parameters(self.mainstream)
         if self.pose_rotation: freeze_parameters(self.aux)
