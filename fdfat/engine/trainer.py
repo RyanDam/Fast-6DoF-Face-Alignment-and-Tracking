@@ -85,11 +85,6 @@ class TrainEngine(BaseEngine):
         elif self.cfgs.checkpoint is not None:
             super().load_checkpoint(self.cfgs.checkpoint, epoch_info=False) # load weight
 
-        # scheduler_warmup = ConstantLR(self.optimizer, factor=self.cfgs.lr0_factor, total_iters=self.cfgs.warmup_epoch)
-        # scheduler_main = LinearLR(self.optimizer, start_factor=1/self.cfgs.lr0_factor, end_factor=self.cfgs.lre_factor, total_iters=self.cfgs.epoch-self.cfgs.warmup_epoch)
-        # self.scheduler = SequentialLR(self.optimizer, schedulers=[scheduler_warmup, scheduler_main], milestones=[self.cfgs.warmup_epoch], last_epoch=self.start_epoch)
-        # self.scheduler = ReduceLROnPlateau(self.optimizer, factor=self.cfgs.lre_factor, patience=self.cfgs.patience)
-        # self.scheduler = MultiStepLR(self.optimizer, milestones=[100,130], gamma=self.cfgs.lre_factor)
         self.scheduler = LinearLR(self.optimizer, start_factor=1, end_factor=self.cfgs.lre_factor, total_iters=self.cfgs.epoch)
 
         if not self.cfgs.resume:
@@ -107,16 +102,11 @@ class TrainEngine(BaseEngine):
             train_loss_dict = train_loop(self.cfgs, current_epoch, self.train_dataloader, self.net, self.loss_fn, self.optimizer, face_loss_fn=self.loss_face_fn)
             test_loss_dict = val_loop(self.cfgs, current_epoch, self.test_dataloader, self.net, self.loss_fn, face_loss_fn=self.loss_face_fn)
             self.scheduler.step()
-            # self.scheduler.step(test_loss_dict['total'])
 
             if test_loss_dict["total"] < self.best_epoch_loss:
                 self.best_epoch_loss = test_loss_dict["total"]
                 self.best_epoch_no = current_epoch
-            # else:
-            #     if current_epoch - self.best_epoch_no > self.cfgs.patience:
-            #         LOGGER.info(f"STOPPED due to no improvement after {current_epoch - self.best_epoch_no} epochs")
-            #         break
-            
+                
             if self.cfgs.save:
                 with open(self.save_log_csv, "a") as f:
                     f.write(f"{current_epoch+1}")

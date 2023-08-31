@@ -2,7 +2,7 @@
 task: train # train, val, predict, export, track
 name: Landmark # name of experiment
 project: # path to project folder
-seed: 0  # random seed for reproducibility
+seed: 22  # random seed for reproducibility
 override: False # overide project if any, otherwise it will created a new project
 profiler: False # show profiler while training
 
@@ -18,37 +18,35 @@ cache: True # cache landmark dataset
 img_read_engine: pil # engine using to load image, 'cv2' or 'pil'
 
 # model
-model: LightWeightModel # modelname
-imgsz: 128 # size of input image as integer
-aux_pose: True # model with auxiliary pose esimation
+model: LWModel # modelname
+imgsz: 96 # size of input image as integer
+aux_pose: False # model with auxiliary pose esimation
 muliplier: 1.0 # model depth multiplier
 checkpoint: # target checkpoint to load
 lmk_mean: False # use landmark mean
 face_cls: False # training with face classify
 freeze_landmark: False # freeze landmark backbone, useful for training face cls
+activation: ReLU6 # activation function
 
 # training
 resume: False # resume training
-epoch: 500 # number of training epoch
-patience: 10 # number of epoch to adjust lr if val loss is not improve
-warmup_epoch: 2 # number of epoch to warmup model using lr0, after that use lr
+epoch: 250 # number of training epoch
 optimizer: NAdam # torch.optim class
 loss: L1Loss # torch.nn class
-lr: 0.001  # main learning rate (i.e. SGD=1E-2, Adam=1E-3)
+lr: 0.002  # main learning rate (i.e. SGD=1E-2, Adam=1E-3)
 batch_size: 64 # batchsize
-lr0_factor: 0.01  # initial learning rate factor
 lre_factor: 0.1 # end_lr = current_lr*lr_factor at the end of the trainning
 device: cpu # target device, ie. cuda device=0 or device=0,1,2,3 or device=cpu
 dump_batch: 1 # write sample batch for debug
 save: True # save checkpoint and stats
 pin_memory: False # use pin memory for dataloader
-aux_pose_weight: 0.5 # loss weight for auxiliary pose esimation
-face_cls_weight: 0.05 # loss weight for face classify
+aux_pose_weight: 0.01 # loss weight for auxiliary pose esimation
+face_cls_weight: 0.01 # loss weight for face classify
 loss_facecls: BCELoss # torch.nn class
 
 # trainning loss weights
 lossw_enabled: False
-w_jaw: 1.0
+w_jaw: 2.0
 w_leyeb: 1.0
 w_reyeb: 1.0
 w_nose: 1.0
