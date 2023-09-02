@@ -29,7 +29,7 @@ class DetectorWorker(Worker):
 
         detections = np.zeros((len(boxes), 5))
         for i, (b, s) in enumerate(zip(boxes, probs)):
-            lb = box_utils.to_landmark_box(b)
+            lb = box_utils.to_landmark_box(b, offest_y=0.13, scale=1.1)
             detections[i,:] = [lb[0], lb[1], lb[2], lb[3], s]
 
         return detections
@@ -149,11 +149,11 @@ class FacialSORT:
 
                     dets, lmks, scores = [], [], []
                     for bbox in detections:
-                        bbox = bbox[:4].astype(np.int32)
-                        with bench_landmark:
-                            lmk, face_cls = self.landmark.predict_frame(frame, bbox, have_face_cls=True)
 
-                        if face_cls >= 0.0:
+                        with bench_landmark:
+                            lmk, face_cls = self.landmark.predict_frame(frame, bbox[:4].astype(np.int32), have_face_cls=True)
+
+                        if face_cls >= 0.5:
                             lmk_box = box_utils.bbox_from_landmark(lmk).flatten()
                             dets.append(lmk_box)
                             lmks.append(lmk)
