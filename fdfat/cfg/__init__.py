@@ -8,7 +8,7 @@ from fdfat.cfg.yaml_utils import yaml_load, yaml_save, yaml_print, DEFAULT_CFG_D
 CFG_INT_KEYS= 'seed', 'workers', 'imgsz', 'epoch', 'batch_size', 'dump_batch', 'patience', 'warmup', "lmk_num", "track_max_age", "track_min_hit"
 CFG_FRACTION_KEYS = 'lr', 'lr0_factor', 'lr_factor', 'aux_pose_weight'
 CFG_FLOAT_KEYS = "aug", 'muliplier', 'w_jaw', 'w_leyeb', 'w_reyeb', 'w_nose', 'w_nosetip', 'w_leye', 'w_reye', 'w_mount', 'w_purpil', 'face_cls_weight', "track_sort_iou_threshold", "track_detector_fps"
-CFG_BOOL_KEYS = "save", "override", "pin_memory", "aux_pose", "lossw_enabled", "resume", "warmup", "pre_norm", "export_simplify", "export_pose", "lmk_mean", "cache", "profiler", "face_cls", "track_visualize", "freeze_landmark"
+CFG_BOOL_KEYS = "save", "override", "pin_memory", "aux_pose", "lossw_enabled", "resume", "warmup", "pre_norm", "export_simplify", "export_pose", "lmk_mean", "cache", "profiler", "face_cls", "track_visualize", "freeze_landmark", "track_verbose"
 
 def cfg2dict(cfg):
     """

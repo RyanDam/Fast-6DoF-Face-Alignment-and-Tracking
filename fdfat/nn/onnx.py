@@ -108,6 +108,10 @@ class LandmarkAligner(ONNXModel):
 
         fheight, fwidth, _ = frame.shape
         lmk_box = box_utils.guard_bbox_inside(bbox, fwidth, fheight)
+        bw, bh = lmk_box[3]-lmk_box[1], lmk_box[2]-lmk_box[0]
+        if bw*bh == 0:
+            return np.zeros((70,2)), 0
+
 
         face_img = frame[lmk_box[1]:lmk_box[3], lmk_box[0]:lmk_box[2], :]
         lmk = self.predict(face_img, have_face_cls=have_face_cls)

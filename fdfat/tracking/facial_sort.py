@@ -94,7 +94,7 @@ class FacialSORT:
 
         if self.args.track_save is not None:
             writer = cv2.VideoWriter(self.args.track_save, 
-                         cv2.VideoWriter_fourcc(*'MJPG'), frame_fps, (frame_width, frame_height))
+                         cv2.VideoWriter_fourcc(*'mp4v'), frame_fps, (frame_width, frame_height))
 
 
         self.sort_tracker = SORT((frame_width, frame_height), 
@@ -132,8 +132,9 @@ class FacialSORT:
 
                 current_time = current_millis()
                 if (current_time - self.detector_last_push_stamp) > self.detector_wait_millis:
+                    det_frame = cv2.resize(frame, (320, 240))
                     with bench_send:
-                        send_object(to_det_socket, frame)
+                        send_object(to_det_socket, det_frame)
                     self.detector_last_push_stamp = current_time
 
                 socks = dict(poller.poll(1))
@@ -141,6 +142,10 @@ class FacialSORT:
                     # self.logger.info(f'recv res from detector at frame {self.frame_id}')
                     with bench_recv:
                         detections = recv_object(from_det_socket)
+                        detections[:,0] *= frame_width/320
+                        detections[:,1] *= frame_height/240
+                        detections[:,2] *= frame_width/320
+                        detections[:,3] *= frame_height/240
 
                     dets, lmks, scores = [], [], []
                     for bbox in detections:
@@ -183,7 +188,7 @@ class FacialSORT:
             cv2.putText(frame, f"FPS: {fps}", (5, 27), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
 
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            
+
             if self.args.track_visualize:
                 
                 cv2.imshow('Render', frame)
@@ -191,18 +196,16 @@ class FacialSORT:
             if self.args.track_save is not None:
                 writer.write(frame)
 
-            # print("====")
-            # bench_read.print_report()
-            # bench_process.print_report()
-            # bench_send.print_report()
-            # bench_recv.print_report()
-            # bench_detector.print_report()
-            # bench_landmark.print_report()
-            # bench_render.print_report()
-            # bench_dummy.print_report()
-            # time.sleep(0.1)
-
-            # time.sleep(0.005)
+            if self.args.track_verbose:
+                print("====")
+                bench_read.print_report()
+                bench_process.print_report()
+                bench_send.print_report()
+                bench_recv.print_report()
+                bench_detector.print_report()
+                bench_landmark.print_report()
+                bench_render.print_report()
+                bench_dummy.print_report()
             
         cap.release()
         if self.args.track_save is not None:

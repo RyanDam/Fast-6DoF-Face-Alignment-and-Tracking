@@ -71,5 +71,6 @@ track_max_age: 30 # maximum frame to hold a track
 track_min_hit: 3 # minimum frame to consider a track
 track_save: # save rendered frame to video file
 track_detector: # detector onnx model
-track_detector_fps: 2 # maximum fps for detector
+track_detector_fps: 2.0 # maximum fps for detector
 track_landmark: # landmark onnx model
+track_verbose: False # print track profile
