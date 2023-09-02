@@ -229,7 +229,7 @@ class LandmarkDataset(Dataset):
             self.aug = A.Compose([
                 A.Resize(self.imgsz, self.imgsz),
                 # A.HorizontalFlip(p=0.5), # do not use, wrong lmk idx
-                # A.Affine(scale=(0.9,1.1), translate_percent=0.1),
+                A.Affine(scale=(0.85,1.15), translate_percent=0.1),
                 A.ToGray(p=0.2),
                 A.Rotate (limit=10, p=0.2),
                 A.RandomBrightnessContrast(p=0.2),
