@@ -182,8 +182,10 @@ class FacialSORT:
             fps = int(1000/(bench_process.report()+1e-6))
             cv2.putText(frame, f"FPS: {fps}", (5, 27), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
 
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            
             if self.args.track_visualize:
-                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                
                 cv2.imshow('Render', frame)
             
             if self.args.track_save is not None:
