@@ -67,7 +67,7 @@ class LWModel(BaseModel):
 
         if self.face_cls:
             self.classifier = nn.Sequential(
-                DWConv(int(32*muliplier), int(32*muliplier), k=3, s=2, act=self.act),
+                DWConv(int(16*muliplier), int(32*muliplier), k=3, s=2, act=self.act),
                 DWConv(int(32*muliplier), int(64*muliplier), k=3, s=2, act=self.act),
                 nn.AdaptiveMaxPool2d((1, 1)),
                 nn.Flatten(start_dim=1),
