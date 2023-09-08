@@ -22,15 +22,20 @@ class DetectorWorker(Worker):
 
     def get_model(self, args):
         detector = FaceDetector(args.track_detector)
-        return detector
+        bench_detector = profiler.Profile("DETECTOR")
+        return detector, bench_detector
     
     def predict(self, model, img):
-        boxes, probs = model.predict(img, threshold=0.75)
+        model, bench_detector = model
+        with bench_detector:
+            boxes, probs = model.predict(img, threshold=0.75)
 
         detections = np.zeros((len(boxes), 5))
         for i, (b, s) in enumerate(zip(boxes, probs)):
             lb = box_utils.to_landmark_box(b, offest_y=0.13, scale=1.1)
             detections[i,:] = [lb[0], lb[1], lb[2], lb[3], s]
+
+        bench_detector.print_report()
 
         return detections
     
@@ -106,7 +111,6 @@ class FacialSORT:
         bench_process = profiler.Profile("PROCESS")
         bench_send = profiler.Profile("SEND")
         bench_recv = profiler.Profile("RECV")
-        bench_detector = profiler.Profile("DETECTOR")
         bench_landmark = profiler.Profile("LANDMARK")
         bench_render   = profiler.Profile("RENDER")
         bench_dummy    = profiler.Profile("DUMPY")
@@ -153,7 +157,7 @@ class FacialSORT:
                         with bench_landmark:
                             lmk, face_cls = self.landmark.predict_frame(frame, bbox[:4].astype(np.int32), have_face_cls=True)
 
-                        if face_cls >= 0.5:
+                        if face_cls >= 0.0:
                             lmk_box = box_utils.bbox_from_landmark(lmk).flatten()
                             dets.append(lmk_box)
                             lmks.append(lmk)
@@ -172,7 +176,7 @@ class FacialSORT:
                         with bench_landmark:
                             lmk, face_cls = self.landmark.predict_frame(frame, f.stable_bbox.astype(np.int32), have_face_cls=True)
 
-                        if face_cls >= 0.5:
+                        if face_cls >= 0.0:
                             lmk_box = box_utils.bbox_from_landmark(lmk).flatten()
                             f.update_bbox(lmk_box)
                             f.update_ladnmark(lmk)
@@ -202,7 +206,6 @@ class FacialSORT:
                 bench_process.print_report()
                 bench_send.print_report()
                 bench_recv.print_report()
-                bench_detector.print_report()
                 bench_landmark.print_report()
                 bench_render.print_report()
                 bench_dummy.print_report()
