@@ -30,11 +30,11 @@ class Profile(contextlib.ContextDecorator):
             return -1
         total = sum(self.samples)
         sizee = len(self.samples)
-        target_t = int(total/sizee)
+        target_t = total/sizee
         return target_t
 
     def report(self):
         return self.avg()
 
     def print_report(self):
-        print(f"[{int(time.time()*1000)}] {self.name}: {self.report()}ms")
+        print(f"[{int(time.time()*1000)}] {self.name}: {self.report()} ms")
