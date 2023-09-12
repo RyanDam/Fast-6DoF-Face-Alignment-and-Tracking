@@ -21,6 +21,18 @@ This project purpose is to implement Ultra lightweight 6 DoF Face Alignment and 
 pip install -U fdfat
 ```
 
+## Demo
+
+For demo, you need face detector model [version-RFB-320.onnx](https://github.com/Linzaer/Ultra-Light-Fast-Generic-Face-Detector-1MB/tree/master/models/onnx)
+
+```
+fdfat \
+--task track \
+--track_detector <path-to-version-RFB-320.onnx> \
+--track_landmark <path-to-landmark-model-onnx> \
+--track_source camera
+```
+
 ## Model Zoo
  
 Check [here](checkpoint/README.md) for currently best model
@@ -41,7 +53,7 @@ Check [here](datasets/README.md) to prepare your datasets
 ### Start training
 
 ```bash
-fdfat --data <path-to-your-dataset-yaml> --model LightWeightModel
+fdfat --data <path-to-your-dataset-yaml> --model LWModel
 ```
 
 For complete list of parameter, please folow this sample config file: [fdfat/cfg/default.yaml](fdfat/cfg/default.yaml)
@@ -49,19 +61,19 @@ For complete list of parameter, please folow this sample config file: [fdfat/cfg
 ## Validation
 
 ```bash
-fdfat --task val --data <path-to-your-dataset-yaml> --model LightWeightModel
+fdfat --task val --data <path-to-your-dataset-yaml> --model LWModel
 ```
 
 ## Predict
 
 ```bash
-fdfat --task predict --model LightWeightModel --checkpoint <path-to-checkoint> --input <path-to-test-img>
+fdfat --task predict --model LWModel --checkpoint <path-to-checkoint> --input <path-to-test-img>
 ```
 
 ## Export
 
 ```bash
-fdfat --task export --model LightWeightModel --checkpoint <path-to-checkoint> --export_format tflite
+fdfat --task export --model LWModel --checkpoint <path-to-checkoint> --export_format tflite
 ```
 
 ## Credit
