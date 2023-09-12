@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-import onnxruntime as ort
 
 from fdfat.utils import box_utils
 
@@ -8,24 +7,53 @@ from fdfat.utils import box_utils
 # ONNX_BACKENDS = ['CoreMLExecutionProvider']
 ONNX_BACKENDS = ['CPUExecutionProvider']
 
-class ONNXModel:
+class InferModelBackend:
 
-    def __init__(self, model_path, channel_first=True):
+    ONNX = 0
+    TFLITE = 1
+
+class InferModel:
+
+    def __init__(self, model_path, channel_first=True, backend=InferModelBackend.ONNX):
 
         self.model_path = model_path
-        # self.input_width, self.input_height = input_size
+        self.backend = backend
+        self.channel_first = channel_first
 
-        sess_options = ort.SessionOptions()
-        sess_options.intra_op_num_threads = 1
-        sess_options.inter_op_num_threads = 1
-        sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
-        sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-        self.session = ort.InferenceSession(self.model_path, sess_options, providers=ONNX_BACKENDS)
+        if self.backend == InferModelBackend.ONNX:
 
-        if channel_first:
-            _, _, self.input_height, self.input_width = self.session.get_inputs()[0].shape
+            import onnxruntime as ort
+
+            sess_options = ort.SessionOptions()
+            sess_options.intra_op_num_threads = 1
+            sess_options.inter_op_num_threads = 1
+            sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+            sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+            self.session = ort.InferenceSession(self.model_path, sess_options, providers=ONNX_BACKENDS)
+
+            if channel_first:
+                _, _, self.input_height, self.input_width = self.session.get_inputs()[0].shape
+            else:
+                _, self.input_height, self.input_width, _ = self.session.get_inputs()[0].shape
+
+        elif self.backend == InferModelBackend.TFLITE:
+            try:
+                import tflite_runtime.interpreter as tflite
+            except:
+                import tensorflow.lite as tflite
+
+
+            self.interpreter = tflite.Interpreter(model_path=self.model_path)
+            self.interpreter.allocate_tensors()
+
+            # Get input and output tensors.
+            self.input_details = self.interpreter.get_input_details()
+            self.output_details = self.interpreter.get_output_details()
+
+            _, self.input_height, self.input_width, _ = self.input_details[0]["shape"]
+            self.channel_first = False
         else:
-            _, self.input_height, self.input_width, _ = self.session.get_inputs()[0].shape
+            raise AttributeError(f"Backend ({self.backend}) is not supported")
 
     def preprocess(self, img):
 
@@ -33,13 +61,24 @@ class ONNXModel:
         img_mean = np.array([127, 127, 127])
         img = (img - img_mean) / 128
 
-        img = np.transpose(img, [2, 0, 1])
+        if self.channel_first:
+            img = np.transpose(img, [2, 0, 1])
+
         img = np.expand_dims(img, axis=0)
         img = img.astype(np.float32)
 
         return img
     
-class FaceDetector(ONNXModel):
+    def _predict(self, img):
+        pass
+    
+class FaceDetector(InferModel):
+
+    def __init__(self, model_path, channel_first=True, backend=InferModelBackend.ONNX):
+        if backend != InferModelBackend.ONNX:
+            raise AttributeError(f"Backend ({backend}) is not supported for FaceDetector")
+        else:
+            super().__init__(model_path, channel_first, backend)
 
     def postprocess(self, width, height, confidences, boxes, prob_threshold, iou_threshold=0.3, top_k=-1):
         boxes = boxes[0]
@@ -82,13 +121,21 @@ class FaceDetector(ONNXModel):
 
         return boxes, probs
     
-class LandmarkAligner(ONNXModel):
+class LandmarkAligner(InferModel):
 
+    def _predict(self, img):
+        if self.backend == InferModelBackend.ONNX:
+            return self.session.run([], {"input": img})[0]
+        elif self.backend == InferModelBackend.TFLITE:
+            self.interpreter.set_tensor(self.input_details[0]['index'], img)
+            self.interpreter.invoke()
+            return self.interpreter.get_tensor(self.output_details[0]['index'])
+        
     def predict(self, ori_img, have_face_cls=False):
         height, width, _ = ori_img.shape
 
         img = self.preprocess(ori_img)
-        lmk = self.session.run([], {'input': img})[0]
+        lmk = self._predict(img)
 
         if have_face_cls:
             lmk, face_cls = lmk[0][:70*2].reshape((70,2)), lmk[0][70*2]
@@ -103,7 +150,7 @@ class LandmarkAligner(ONNXModel):
             return lmk, face_cls
         
         return lmk
-    
+
     def predict_frame(self, frame, bbox, have_face_cls=False):
 
         fheight, fwidth, _ = frame.shape
@@ -111,7 +158,6 @@ class LandmarkAligner(ONNXModel):
         bw, bh = lmk_box[3]-lmk_box[1], lmk_box[2]-lmk_box[0]
         if bw*bh == 0:
             return np.zeros((70,2)), 0
-
 
         face_img = frame[lmk_box[1]:lmk_box[3], lmk_box[0]:lmk_box[2], :]
         lmk = self.predict(face_img, have_face_cls=have_face_cls)

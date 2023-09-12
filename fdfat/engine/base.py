@@ -91,3 +91,4 @@ class BaseEngine:
             self.best_epoch_loss = checkpoint['best_fit']
             self.best_epoch_no = checkpoint['best_epoch']
         LOGGER.info(f"Loaded checkpoint epoch {checkpoint['epoch']}")
+        

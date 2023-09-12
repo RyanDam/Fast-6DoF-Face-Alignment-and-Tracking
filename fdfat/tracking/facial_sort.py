@@ -5,7 +5,7 @@ from termcolor import colored
 import zmq
 import zmq.decorators as zmqd
 
-from fdfat.nn.onnx import LandmarkAligner, FaceDetector
+from fdfat.nn.infer import LandmarkAligner, FaceDetector, InferModelBackend
 from fdfat.tracking.sort import SORT
 from fdfat.utils import box_utils
 from fdfat.utils import profiler
@@ -53,7 +53,11 @@ class FacialSORT:
         self.frame_id = 0
         self.current_faces = [] # to visualize
 
-        self.landmark = LandmarkAligner(self.args.track_landmark)
+        if self.args.track_landmark.endswith(".onnx"):
+            self.infer_backend = InferModelBackend.ONNX 
+        elif self.args.track_landmark.endswith(".tflite"):
+            self.infer_backend = InferModelBackend.TFLITE 
+        self.landmark = LandmarkAligner(self.args.track_landmark, backend=self.infer_backend)
 
     def run(self):
         self._run()
