@@ -98,11 +98,11 @@ class Face:
 
     def render(self, frame):
 
-        tbox = self.bbox.astype(np.int32)
-        cv2.rectangle(frame, (tbox[0], tbox[1]), (tbox[2], tbox[3]), (0,0,0), 4)
+        # tbox = self.bbox.astype(np.int32)
+        # cv2.rectangle(frame, (tbox[0], tbox[1]), (tbox[2], tbox[3]), (0,0,0), 2)
 
         sbox = self.stable_bbox.astype(np.int32)
-        cv2.rectangle(frame, (sbox[0], sbox[1]), (sbox[2], sbox[3]), get_color(self.id), 4)
+        cv2.rectangle(frame, (sbox[0], sbox[1]), (sbox[2], sbox[3]), get_color(self.id), 2)
 
         if not self.landmarked_initiated:
             return
@@ -112,14 +112,14 @@ class Face:
             lx, ly = lmk[begin]
             for idx in range(begin+1, end):
                 x, y = lmk[idx]
-                cv2.line(frame, (lx, ly), (x, y), (255, 0, 0), 2)
+                cv2.line(frame, (lx, ly), (x, y), (255, 0, 0), 1)
                 lx, ly = x, y
 
         for x, y in lmk:
-            cv2.circle(frame, (x, y), 2, (255, 255, 255), 2)
+            cv2.circle(frame, (x, y), 2, (255, 255, 255), 1)
             
-        cv2.putText(frame, f"{self.id}", (sbox[0]+5, sbox[1]+30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
+        cv2.putText(frame, f"id: {self.id}", (sbox[0]+5, sbox[1]+30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
 
-        cv2.putText(frame, f"{self.face_score*100:0.1f}", (sbox[0]+5, sbox[1]+60), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
+        # cv2.putText(frame, f"{self.face_score*100:0.1f}", (sbox[0]+5, sbox[1]+60), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
 
         self.pose_estimator.visualize(frame, self._pose)

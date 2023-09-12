@@ -4,7 +4,9 @@ Working in progess...
 
 # Fast 6DoF Face Alignment and Tracking
 
-This project purpose is to implement Ultra lightweight 6 DoF Face Alignment and Tracking. This project is capable of realtime face tracking for edge device.
+![Demo](media/300VW_Trainset_009_processed.gif)
+
+This project purpose is to implement Ultra lightweight 6 DoF Face Alignment and Tracking. This project is capable of realtime face tracking for edge device using only CPU.
 
 ## Installation
 
@@ -25,12 +27,24 @@ pip install -U fdfat
 
 For demo, you need face detector model [version-RFB-320.onnx](https://github.com/Linzaer/Ultra-Light-Fast-Generic-Face-Detector-1MB/tree/master/models/onnx)
 
+Running using webcam
+
 ```
 fdfat \
 --task track \
 --track_detector <path-to-version-RFB-320.onnx> \
 --track_landmark <path-to-landmark-model-onnx> \
 --track_source camera
+```
+
+Running using video
+
+```
+fdfat \
+--task track \
+--track_detector <path-to-version-RFB-320.onnx> \
+--track_landmark <path-to-landmark-model-onnx> \
+--input media/300VW_Trainset_009.mp4 \
 ```
 
 ## Model Zoo
