@@ -4,7 +4,7 @@ Working in progess...
 
 # Fast 6DoF Face Alignment and Tracking
 
-This project purpose is to implement Ultra lightweight 6 DoF Face Alignment and Tracking. This project is capable of realtime tracking face for mobile device.
+This project purpose is to implement Ultra lightweight 6 DoF Face Alignment and Tracking. This project is capable of realtime face tracking for edge device.
 
 ## Installation
 
@@ -22,25 +22,21 @@ pip install -U fdfat
 ```
 
 ## Model Zoo
-
-TODO: add best model
+ 
+Check [here](checkpoint/README.md) for currently best model
 
 ## Training
 
+Training usually take 2 step:
+
+- Step 1: Train landmark model with the output of 70 landmark points (or 68 for 300W dataset). After the model saturation, process to the next step.
+- Step 2: Take the best trained landmark checkpoint, freeze all the parameter and add face classification head and train. This step will add face classify capacity for the tracking while maintain best landmark regression accuracy
+
+All the step is supported by default.
+
 ### Prepare the dataset
 
-This project use 3d 68 points of landmark (difference from the original 300W dataset). Please go to [FaceSynthetics](https://github.com/microsoft/FaceSynthetics) to download the dataset (100K one) and extract it to your disk.
-
-Create your dataset yaml file with the following info:
-
-```yaml
-base_path: <path-to-face-synthesis-dataset>/dataset_100000
-train: <path-to-list-train-text-file.txt>
-val: <path-to-list-val-text-file.txt>
-test: <path-to-list-test-text-file.txt>
-```
-
-note: you can use list train file in `datasets/FaceSynthetics` for reference.
+Check [here](datasets/README.md) to prepare your datasets
 
 ### Start training
 
