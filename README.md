@@ -6,6 +6,8 @@ Working in progess...
 
 ![Demo](media/300VW_Trainset_009_processed.gif)
 
+Facial alignment and Face tracking is no news but gain significant usage recently. The wave of  application such as argumented reality or virtual reality, self driving car or even face beauty app on mobile phone is rising recently year. All that application have the same aspect: edge device with low computaion capacity or run on battery. To optimize speed and efficiency on that devices, researcher and engineer ten to limits the capacity of the AI model results in decrease accurancy. This paper introduce a novel, efficency and robust way to track Facial feature, which will run only on cpu and easy to adap to other subject such as human, hand, etc...
+
 This project purpose is to implement Ultra lightweight 6 DoF Face Alignment and Tracking. This project is capable of realtime face tracking for edge device using only CPU.
 
 ## Installation
