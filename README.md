@@ -1,7 +1,3 @@
-
-
-Working in progess...
-
 # Fast 6DoF Face Alignment and Tracking
 
 ![Demo](media/300VW_Trainset_009_processed.gif)
